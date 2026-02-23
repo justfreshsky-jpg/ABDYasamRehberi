@@ -1,4 +1,5 @@
 import os
+os.environ['HTTPX_PROXIES'] = 'null'
 import traceback
 from flask import Flask, request, jsonify, render_template_string
 from groq import Groq
@@ -9,180 +10,447 @@ client = Groq(api_key=GROQ_KEY) if GROQ_KEY else None
 
 def llm(system, user):
     if not client:
-        return "GROQ_KEY environment variable is missing."
+        return "GROQ_KEY eksik. Render'da Environment Variables kısmına ekle."
     r = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": user}
-        ],
-        max_tokens=2000,
-        temperature=0.7
+        messages=[{"role":"system","content":system},{"role":"user","content":user}],
+        max_tokens=2000, temperature=0.7
     )
     return r.choices[0].message.content
 
-HTML = """
-<!DOCTYPE html>
+HTML = """<!DOCTYPE html>
 <html lang="tr">
 <head>
-    <title>🇺🇸 ABD'ye Hoş Geldin! AI Rehber 🇹🇷</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <style>
-        :root { 
-            --primary: #1e40af; --primary-dark: #1e3a8a; --accent: #3b82f6; 
-            --success: #10b981; --bg: #f8fafc; --card: #fff; --text: #1e293b; --text-muted: #64748b;
-            --shadow: 0 10px 30px rgba(0,0,0,0.1); --radius: 16px; 
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Segoe UI', -apple-system, sans-serif; background: linear-gradient(135deg, var(--bg) 0%, #e2e8f0 100%); color: var(--text); line-height: 1.6; }
-        .hero { background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; padding: 40px 20px; text-align: center; position: relative; overflow: hidden; }
-        .hero::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url('data:image/svg+xml,<svg xmlns=\\"http://www.w3.org/2000/svg\\" viewBox=\\"0 0 100 10\\"><defs><pattern id=\\"grain\\" width=\\"100\\" height=\\"10\\" patternUnits=\\"userSpaceOnUse\\"><circle cx=\\"5\\" cy=\\"5\\" r=\\"1\\" fill=\\"rgba(255,255,255,0.1)\\"/></pattern></defs><rect width=\\"100\\" height=\\"10\\" fill=\\"url(%23grain)\\"/></svg>'); opacity: 0.3; }
-        .hero h1 { font-size: 2.5em; margin-bottom: 10px; font-weight: 800; position: relative; z-index: 1; }
-        .hero p { font-size: 1.2em; opacity: 0.95; max-width: 600px; margin: 0 auto; position: relative; z-index: 1; }
-        .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; padding: 40px 20px; max-width: 1200px; margin: 0 auto; }
-        .feature { background: var(--card); border-radius: var(--radius); padding: 24px; text-align: center; box-shadow: var(--shadow); transition: all 0.3s; border-top: 4px solid var(--accent); }
-        .feature:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(0,0,0,0.15); }
-        .feature i { font-size: 2.5em; color: var(--primary); margin-bottom: 12px; }
-        .feature h3 { color: var(--text); margin-bottom: 8px; font-size: 1.1em; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-        .tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 40px 0; }
-        .tabs button { background: var(--card); border: 2px solid #e2e8f0; padding: 16px; border-radius: var(--radius); cursor: pointer; font-weight: 600; transition: all 0.3s; position: relative; overflow: hidden; }
-        .tabs button::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent); transition: left 0.5s; }
-        .tabs button:hover::before { left: 100%; }
-        .tabs button.active { background: var(--primary); color: white; border-color: var(--accent); box-shadow: var(--shadow); }
-        .tab { display: none; animation: fadeIn 0.5s; }
-        .tab.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .card { background: var(--card); border-radius: var(--radius); padding: 32px; box-shadow: var(--shadow); margin-bottom: 24px; border: 1px solid #f1f5f9; }
-        .card h2 { color: var(--primary); font-size: 1.8em; margin-bottom: 12px; display: flex; align-items: center; gap: 12px; }
-        .hint { color: var(--text-muted); font-style: italic; margin-bottom: 20px; background: #f8fafc; padding: 16px; border-radius: 12px; border-left: 4px solid var(--success); }
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
-        @media (max-width: 768px) { .form-row { grid-template-columns: 1fr; } }
-        .field { display: flex; flex-direction: column; gap: 8px; }
-        label { font-weight: 600; color: var(--text); }
-        input, select, textarea { padding: 14px 16px; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 16px; transition: all 0.3s; background: #fafbfc; }
-        input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(59,130,246,0.1); outline: none; background: white; }
-        .btn { background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; border: none; padding: 16px 32px; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: var(--shadow); width: 100%; position: relative; overflow: hidden; }
-        .btn:hover { transform: translateY(-2px); box-shadow: 0 15px 35px rgba(30,64,175,0.4); }
-        .btn:disabled { opacity: 0.7; cursor: not-allowed; }
-        .output { background: #f8fafc; border: 2px solid #e2e8f0; border-radius: var(--radius); padding: 24px; min-height: 120px; white-space: pre-wrap; font-size: 15px; line-height: 1.7; position: relative; }
-        .copy-btn { position: absolute; top: 16px; right: 16px; background: var(--success); color: white; border: none; border-radius: 8px; padding: 8px 16px; cursor: pointer; opacity: 0; transition: opacity 0.3s; font-weight: 500; }
-        .output-wrap:hover .copy-btn { opacity: 1; }
-        .footer { text-align: center; padding: 40px 20px; color: var(--text-muted); background: var(--card); margin-top: 40px; border-radius: var(--radius); }
-        @media (max-width: 768px) { .hero h1 { font-size: 2em; } .tabs { grid-template-columns: repeat(3, 1fr); } }
-    </style>
+<title>ABD Yaşam Rehberi</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Segoe UI,Arial,sans-serif;background:#f0f4ff;color:#1e293b}
+.hero{background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:#fff;padding:40px 20px;text-align:center}
+.hero h1{font-size:2.2em;font-weight:800;margin-bottom:10px}
+.hero p{font-size:1.1em;opacity:.9;max-width:600px;margin:0 auto 16px}
+.steps{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;margin-top:12px}
+.step{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:6px 16px;font-size:.9em}
+.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;max-width:1000px;margin:30px auto;padding:0 20px}
+.feat{background:#fff;border-radius:14px;padding:20px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.08);border-top:4px solid #3b82f6;transition:transform .3s}
+.feat:hover{transform:translateY(-6px)}
+.feat i{font-size:2em;color:#1e40af;margin-bottom:8px}
+.feat h3{font-size:1em;margin-bottom:4px;color:#1e293b}
+.feat p{font-size:.82em;color:#64748b}
+.container{max-width:900px;margin:0 auto;padding:20px}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:24px 0}
+@media(max-width:600px){.tabs{grid-template-columns:repeat(2,1fr)}}
+.tabs button{background:#fff;border:2px solid #e2e8f0;padding:12px 8px;border-radius:12px;cursor:pointer;font-size:12px;font-weight:600;color:#1e293b;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:4px}
+.tabs button i{font-size:1.4em;color:#3b82f6}
+.tabs button.active{background:#1e3a8a;color:#fff;border-color:#3b82f6}
+.tabs button.active i{color:#fff}
+.tabs button:hover:not(.active){background:#f0f4ff;transform:translateY(-2px)}
+.tab{display:none}
+.tab.active{display:block;animation:fadeIn .4s}
+@keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.card{background:#fff;border-radius:16px;padding:28px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
+.card h2{color:#1e3a8a;font-size:1.5em;margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.hint{background:#f0f9ff;border-left:4px solid #10b981;padding:14px 16px;border-radius:0 10px 10px 0;margin-bottom:20px;font-size:.9em;color:#0f4c75}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:500px){.form-row{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+label{font-weight:600;font-size:.9em;color:#334155}
+input,select,textarea{padding:12px 14px;border:2px solid #e2e8f0;border-radius:10px;font-size:15px;transition:border .2s;background:#fafbfc;width:100%}
+input:focus,select:focus,textarea:focus{border-color:#3b82f6;outline:none;background:#fff}
+textarea{resize:vertical;min-height:90px}
+.btn{background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:#fff;border:none;padding:14px;width:100%;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin:16px 0 8px;box-shadow:0 4px 15px rgba(30,64,175,.3);transition:all .2s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(30,64,175,.4)}
+.btn:disabled{opacity:.65;cursor:not-allowed;transform:none}
+.output-wrap{position:relative;margin-top:8px}
+.output{background:#f8fafc;border:2px solid #e2e8f0;border-radius:12px;padding:20px;min-height:100px;white-space:pre-wrap;font-size:14px;line-height:1.75}
+.copy-btn{position:absolute;top:10px;right:10px;background:#10b981;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;opacity:0;transition:opacity .2s}
+.output-wrap:hover .copy-btn{opacity:1}
+.spinner{display:inline-block;width:16px;height:16px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.footer{text-align:center;padding:32px 20px;color:#64748b;font-size:.88em;line-height:2;margin-top:20px}
+</style>
 </head>
 <body>
-    <div class="hero">
-        <h1><i class="fas fa-globe-americas"></i> ABD'ye Hoş Geldin!</h1>
-        <p>🇹🇷 Türkler için <strong>pratik AI rehberi</strong>. Vize, vergi, ev, iş sıfırdan adım adım.</p>
-    </div>
-    
-    <div class="features">
-        <div class="feature">
-            <i class="fas fa-passport"></i>
-            <h3>1 Günde Vize</h3>
-            <p>J-1, H1B formları hazır</p>
-        </div>
-        <div class="feature">
-            <i class="fas fa-dollar-sign"></i>
-            <h3>Vergi İadesi</h3>
-            <p>$1000+ geri al</p>
-        </div>
-        <div class="feature">
-            <i class="fas fa-car"></i>
-            <h3>Uber Başla</h3>
-            <p>Haftada $1000+</p>
-        </div>
-        <div class="feature">
-            <i class="fas fa-home"></i>
-            <h3>Ev Bul</h3>
-            <p>$800 NJ evler</p>
-        </div>
-    </div>
 
-    <div class="container">
-        <div class="tabs">
-            <button class="active" onclick="showTab('vize')"><i class="fas fa-passport"></i> Vize</button>
-            <button onclick="showTab('vergi')"><i class="fas fa-calculator"></i> Vergi</button>
-            <button onclick="showTab('rideshare')"><i class="fas fa-car"></i> Rideshare</button>
-            <button onclick="showTab('ev')"><i class="fas fa-home"></i> Ev</button>
-            <button onclick="showTab('saglik')"><i class="fas fa-heartbeat"></i> Sağlık</button>
-            <button onclick="showTab('ehliyet')"><i class="fas fa-id-card"></i> Ehliyet</button>
-            <button onclick="showTab('banka')"><i class="fas fa-university"></i> Banka</button>
-            <button onclick="showTab('sorgu')"><i class="fas fa-question"></i> Soru</button>
-        </div>
+<div class="hero">
+  <h1>🇺🇸 ABD'ye Hoş Geldin!</h1>
+  <p>Türkler için pratik AI rehberi — sıfırdan adım adım</p>
+  <div class="steps">
+    <span class="step">1️⃣ Vize Al</span>
+    <span class="step">2️⃣ SSN Çıkar</span>
+    <span class="step">3️⃣ Banka Aç</span>
+    <span class="step">4️⃣ Ev Bul</span>
+    <span class="step">5️⃣ Çalış / Para Kazan</span>
+  </div>
+</div>
 
-        <!-- Tab içerikleri aynı ama .card class ile güzel -->
-        <!-- Örnek vize tab: -->
-        <div id="vize" class="tab active">
-            <div class="card">
-                <h2><i class="fas fa-passport"></i> Vize & Green Card</h2>
-                <p class="hint"><strong>🎯 Yeni gelen için:</strong> J-1 öğrenci vizesi 1 haftada hazır. SSN al, sonra H1B planla.</p>
-                <!-- Formlar aynı -->
-            </div>
-        </div>
-        <!-- Diğer tablar benzer şekilde ikonlu + yol gösterici hint -->
+<div class="features">
+  <div class="feat"><i class="fas fa-passport"></i><h3>Vize & Green Card</h3><p>J-1, H1B, E-2</p></div>
+  <div class="feat"><i class="fas fa-calculator"></i><h3>Vergi İadesi</h3><p>$500-2000 geri al</p></div>
+  <div class="feat"><i class="fas fa-car"></i><h3>Rideshare</h3><p>Uber/Lyft başla</p></div>
+  <div class="feat"><i class="fas fa-home"></i><h3>Ucuz Ev</h3><p>NJ $800 kiralık</p></div>
+  <div class="feat"><i class="fas fa-heartbeat"></i><h3>Ücretsiz Sağlık</h3><p>Medicaid, free clinic</p></div>
+  <div class="feat"><i class="fas fa-university"></i><h3>Banka Aç</h3><p>SSN olmadan</p></div>
+</div>
 
+<div class="container">
+  <div class="tabs">
+    <button class="active" onclick="show('vize',this)"><i class="fas fa-passport"></i>Vize</button>
+    <button onclick="show('vergi',this)"><i class="fas fa-calculator"></i>Vergi</button>
+    <button onclick="show('rideshare',this)"><i class="fas fa-car"></i>Rideshare</button>
+    <button onclick="show('ev',this)"><i class="fas fa-home"></i>Ev</button>
+    <button onclick="show('saglik',this)"><i class="fas fa-heartbeat"></i>Sağlık</button>
+    <button onclick="show('ehliyet',this)"><i class="fas fa-id-card"></i>Ehliyet</button>
+    <button onclick="show('banka',this)"><i class="fas fa-university"></i>Banka</button>
+    <button onclick="show('telefon',this)"><i class="fas fa-phone"></i>Telefon</button>
+    <button onclick="show('arac',this)"><i class="fas fa-car-side"></i>Araç</button>
+    <button onclick="show('wise',this)"><i class="fas fa-exchange-alt"></i>Wise</button>
+    <button onclick="show('ucak',this)"><i class="fas fa-plane"></i>Uçak</button>
+    <button onclick="show('sorgu',this)"><i class="fas fa-question-circle"></i>Soru Sor</button>
+  </div>
+
+  <!-- VİZE -->
+  <div id="vize" class="tab active">
+    <div class="card">
+      <h2><i class="fas fa-passport"></i> Vize & Green Card</h2>
+      <div class="hint">🎯 <strong>Yeni gelen için:</strong> J-1 ile başla, iş bulunca H1B'e geç. Her adım burada.</div>
+      <div class="form-row">
+        <div class="field"><label>Vize Tipi</label><select id="v1"><option>J-1 Öğrenci</option><option>H-1B İş</option><option>E-2 Yatırım</option><option>Yeşil Kart (EB)</option><option>Ziyaretçi B-2</option><option>F-1 Öğrenci</option></select></div>
+        <div class="field"><label>Hangi State'desin?</label><input id="v2" placeholder="örn. New Jersey"></div>
+      </div>
+      <div class="field"><label>Özel Durum (isteğe bağlı)</label><input id="v3" placeholder="örn. İlk kez başvuru, uzatma, reddedildim"></div>
+      <button class="btn" id="vb" onclick="call('/vize',{tip:g('v1'),state:g('v2'),durum:g('v3')},'vo','vb','Vize Rehberi Oluştur')">Vize Rehberi Oluştur</button>
+      <div class="output-wrap"><div id="vo" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('vo')">Kopyala</button></div>
     </div>
-    
-    <div class="footer">
-        <p><strong>⭐ İlk adımın ne?</strong> Vize → Vergi → Rideshare → Ev</p>
-        <p>Abdyasam inspired | Ücretsiz | Veri saklanmaz | NJ odaklı</p>
-    </div>
+  </div>
 
-    <script>/* Önceki JS aynı ama smooth animasyonlar ekle*/</script>
+  <!-- VERGİ -->
+  <div id="vergi" class="tab">
+    <div class="card">
+      <h2><i class="fas fa-calculator"></i> Vergi İadesi & Formlar</h2>
+      <div class="hint">💰 <strong>Bilmesi gereken:</strong> İlk yıl 1040NR doldur. Rideshare varsa 1099 da ekle. Ortalama $500-2000 iade alırsın.</div>
+      <div class="form-row">
+        <div class="field"><label>Form Tipi</label><select id="t1"><option>W-4 (Bordro)</option><option>1040NR (Uluslararası)</option><option>1099-K (Rideshare)</option><option>W-2 (Çalışan)</option></select></div>
+        <div class="field"><label>Yıllık Kazanç ($)</label><input id="t2" type="number" placeholder="örn. 35000"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Vize Tipin</label><select id="t3"><option>F-1 / J-1</option><option>H-1B</option><option>Green Card</option><option>Vatandaş</option></select></div>
+        <div class="field"><label>State</label><input id="t4" placeholder="New Jersey"></div>
+      </div>
+      <button class="btn" id="tb" onclick="call('/vergi',{form:g('t1'),kazanc:g('t2'),vize:g('t3'),state:g('t4')},'to','tb','Vergi Rehberi Oluştur')">Vergi Rehberi Oluştur</button>
+      <div class="output-wrap"><div id="to" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('to')">Kopyala</button></div>
+    </div>
+  </div>
+
+  <!-- RİDESHARE -->
+  <div id="rideshare" class="tab">
+    <div class="card">
+      <h2><i class="fas fa-car"></i> Uber / Lyft ile Para Kazan</h2>
+      <div class="hint">🚗 <strong>Yeni gelen için:</strong> Ehliyet + araba + SSN yeter. Haftada $800-1500 kazanabilirsin.</div>
+      <div class="form-row">
+        <div class="field"><label>Uygulama</label><select id="r1"><option>Uber</option><option>Lyft</option><option>Her İkisi</option></select></div>
+        <div class="field"><label>State</label><input id="r2" placeholder="New Jersey"></div>
+      </div>
+      <div class="field"><label>Konu</label><select id="r3"><option>Nasıl başlarım?</option><option>1099 formu / vergi</option><option>Haftada ne kadar kazanırım?</option><option>Masraf düşüm (deduction)</option></select></div>
+      <button class="btn" id="rb" onclick="call('/rideshare',{app:g('r1'),state:g('r2'),konu:g('r3')},'ro','rb','Rideshare Rehberi')">Rehber Oluştur</button>
+      <div class="output-wrap"><div id="ro" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('ro')">Kopyala</button></div>
+    </div>
+  </div>
+
+  <!-- EV -->
+  <div id="ev" class="tab">
+    <div class="card">
+      <h2><i class="fas fa-home"></i> Ev / Daire Kiralama</h2>
+      <div class="hint">🏠 <strong>İpucu:</strong> NJ'de Newark, Paterson gibi şehirlerde 1+1 daireler $900-1200. Craigslist ve Zillow dene.</div>
+      <div class="form-row">
+        <div class="field"><label>Şehir / Bölge</label><input id="e1" placeholder="örn. Newark NJ, Jersey City"></div>
+        <div class="field"><label>Bütçe ($/ay)</label><input id="e2" type="number" placeholder="1200"></div>
+      </div>
+      <div class="field"><label>Özel Durum</label><input id="e3" placeholder="örn. SSN yok, kredi skoru yok, evcil hayvan var"></div>
+      <button class="btn" id="eb" onclick="call('/ev',{sehir:g('e1'),butce:g('e2'),durum:g('e3')},'eo','eb','Ev Bulma Rehberi')">Rehber Oluştur</button>
+      <div class="output-wrap"><div id="eo" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('eo')">Kopyala</button></div>
+    </div>
+  </div>
+
+  <!-- SAĞLIK -->
+  <div id="saglik" class="tab">
+    <div class="card">
+      <h2><i class="fas fa-heartbeat"></i> Ücretsiz Sağlık Sigortası</h2>
+      <div class="hint">🏥 <strong>Bilmesi gereken:</strong> NJ'de düşük gelirle Medicaid ücretsiz. Doküman lazım değil bazı kliniklerde.</div>
+      <div class="form-row">
+        <div class="field"><label>State</label><input id="h1" placeholder="New Jersey"></div>
+        <div class="field"><label>Durum</label><select id="h2"><option>Sigorta yok, nasıl alırım?</option><option>Medicaid nasıl başvururum?</option><option>Ücretsiz klinik nerede?</option><option>SSN olmadan sigorta?</option></select></div>
+      </div>
+      <button class="btn" id="hb" onclick="call('/saglik',{state:g('h1'),durum:g('h2')},'ho','hb','Sağlık Rehberi')">Rehber Oluştur</button>
+      <div class="output-wrap"><div id="ho" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('ho')">Kopyala</button></div>
+    </div>
+  </div>
+
+  <!-- EHLİYET -->
+  <div id="ehliyet" class="tab">
+    <div class="card">
+      <h2><i class="fas fa-id-card"></i> Ehliyet Alma (DMV)</h2>
+      <div class="hint">🪪 <strong>İpucu:</strong> NJ'de undocumented bile ehliyet alabiliyor. 6 Points of ID sistemi var.</div>
+      <div class="form-row">
+        <div class="field"><label>State</label><input id="l1" placeholder="New Jersey"></div>
+        <div class="field"><label>Durum</label><select id="l2"><option>İlk kez alıyorum</option><option>Türk ehliyetimi çevirmek istiyorum</option><option>SSN / ITIN yok</option><option>Real ID lazım</option></select></div>
+      </div>
+      <button class="btn" id="lb" onclick="call('/ehliyet',{state:g('l1'),durum:g('l2')},'lo','lb','Ehliyet Rehberi')">Rehber Oluştur</button>
+      <div class="output-wrap"><div id="lo" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('lo')">Kopyala</button></div>
+    </div>
+  </div>
+
+  <!-- BANKA -->
+  <div id="banka" class="tab">
+    <div class="card">
+      <h2><i class="fas fa-university"></i> Banka Hesabı Açma</h2>
+      <div class="hint">💳 <strong>İpucu:</strong> Chase, Bank of America pasaport ile açılıyor. Wise / Zelle için de hesap şart.</div>
+      <div class="field"><label>Durum</label><select id="ba1"><option>SSN olmadan banka açmak istiyorum</option><option>Kredi kartı almak istiyorum</option><option>Credit score sıfırdan nasıl yaparım?</option><option>En iyi ücretsiz banka hangisi?</option></select></div>
+      <button class="btn" id="bb" onclick="call('/banka',{durum:g('ba1')},'bo','bb','Banka Rehberi')">Rehber Oluştur</button>
+      <div class="output-wrap"><div id="bo" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('bo')">Kopyala</button></div>
+    </div>
+  </div>
+
+  <!-- TELEFON -->
+  <div id="telefon" class="tab">
+    <div class="card">
+      <h2><i class="fas fa-phone"></i> ABD Telefon Numarası</h2>
+      <div class="hint">📱 <strong>İpucu:</strong> Google Voice ile SSN olmadan ücretsiz Amerikan numarası alabilirsin.</div>
+      <div class="field"><label>Konu</label><select id="p1"><option>Ücretsiz numara (Google Voice)</option><option>Ucuz hat (Mint, Visible, T-Mobile)</option><option>SSN olmadan kontrat hat</option><option>Türkiye'yi ucuz arama</option></select></div>
+      <button class="btn" id="pb" onclick="call('/telefon',{konu:g('p1')},'po','pb','Telefon Rehberi')">Rehber Oluştur</button>
+      <div class="output-wrap"><div id="po" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('po')">Kopyala</button></div>
+    </div>
+  </div>
+
+  <!-- ARAÇ -->
+  <div id="arac" class="tab">
+    <div class="card">
+      <h2><i class="fas fa-car-side"></i> Araç Kiralama / Satın Alma</h2>
+      <div class="hint">🚗 <strong>İpucu:</strong> SSN olmadan araç satın alınabiliyor. Turo veya Hertz ile başla.</div>
+      <div class="form-row">
+        <div class="field"><label>State</label><input id="ar1" placeholder="New Jersey"></div>
+        <div class="field"><label>Konu</label><select id="ar2"><option>İkinci el araç almak istiyorum</option><option>Araç kiralamak istiyorum</option><option>Araç sigortası almak istiyorum</option><option>SSN olmadan araç alınır mı?</option></select></div>
+      </div>
+      <button class="btn" id="arb" onclick="call('/arac',{state:g('ar1'),konu:g('ar2')},'aro','arb','Araç Rehberi')">Rehber Oluştur</button>
+      <div class="output-wrap"><div id="aro" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('aro')">Kopyala</button></div>
+    </div>
+  </div>
+
+  <!-- WİSE -->
+  <div id="wise" class="tab">
+    <div class="card">
+      <h2><i class="fas fa-exchange-alt"></i> Para Transfer (Wise / Zelle)</h2>
+      <div class="hint">💸 <strong>İpucu:</strong> Wise ile TL/$ kurunu en düşük komisyonla gönder. Limit $50,000/yıl.</div>
+      <div class="field"><label>Konu</label><select id="w1"><option>Wise ile Türkiye'ye para gönderme</option><option>Wise limitleri ve ücretleri</option><option>Zelle nasıl kullanılır?</option><option>Venmo / CashApp rehberi</option></select></div>
+      <button class="btn" id="wb" onclick="call('/wise',{konu:g('w1')},'wo','wb','Para Transfer Rehberi')">Rehber Oluştur</button>
+      <div class="output-wrap"><div id="wo" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('wo')">Kopyala</button></div>
+    </div>
+  </div>
+
+  <!-- UÇAK -->
+  <div id="ucak" class="tab">
+    <div class="card">
+      <h2><i class="fas fa-plane"></i> Uçak & Bagaj</h2>
+      <div class="hint">✈️ <strong>İpucu:</strong> Turkish Airlines ile NJ→İstanbul $400-700. Bagaj fazlası ödeme yerine önceden al.</div>
+      <div class="form-row">
+        <div class="field"><label>Havayolu</label><select id="u1"><option>Turkish Airlines</option><option>American Airlines</option><option>United</option><option>Delta</option><option>Diğer</option></select></div>
+        <div class="field"><label>Konu</label><select id="u2"><option>Bagaj ücretleri ve kurallar</option><option>En ucuz bilet nasıl bulunur?</option><option>Check-in rehberi</option><option>Refund / iptal kuralları</option></select></div>
+      </div>
+      <button class="btn" id="ub" onclick="call('/ucak',{havayolu:g('u1'),konu:g('u2')},'uo','ub','Uçak Rehberi')">Rehber Oluştur</button>
+      <div class="output-wrap"><div id="uo" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('uo')">Kopyala</button></div>
+    </div>
+  </div>
+
+  <!-- SORU SOR -->
+  <div id="sorgu" class="tab">
+    <div class="card">
+      <h2><i class="fas fa-question-circle"></i> Herhangi Bir Soru Sor</h2>
+      <div class="hint">🤖 Abdyasam gibi pratik cevaplar. ABD hayatıyla ilgili aklına takılan her şeyi sor.</div>
+      <div class="field"><label>Sorun nedir?</label><textarea id="q1" rows="4" placeholder="örn. SSN olmadan iş bulabilir miyim? İlk ay ne yapmalıyım?"></textarea></div>
+      <button class="btn" id="qb" onclick="call('/sorgu',{soru:g('q1')},'qo','qb','Cevapla')">Cevapla</button>
+      <div class="output-wrap"><div id="qo" class="output">Cevap burada çıkacak...</div><button class="copy-btn" onclick="cp('qo')">Kopyala</button></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  <strong>🇺🇸 ABD Yaşam Rehberi</strong> | Abdyasam inspired | Ücretsiz | NJ odaklı<br>
+  Hiçbir kişisel veri saklanmaz | Sorular sadece AI'a iletilir
+</div>
+
+<script>
+function g(id){return document.getElementById(id).value;}
+function show(tab,btn){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
+  document.getElementById(tab).classList.add('active');
+  btn.classList.add('active');
+}
+function cp(id){
+  navigator.clipboard.writeText(document.getElementById(id).innerText).then(()=>{
+    const btn=document.querySelector('#'+id).parentNode.querySelector('.copy-btn');
+    btn.textContent='Kopyalandı!';
+    setTimeout(()=>btn.textContent='Kopyala',2000);
+  });
+}
+async function call(endpoint,data,outId,btnId,label){
+  const out=document.getElementById(outId);
+  const btn=document.getElementById(btnId);
+  btn.disabled=true;
+  btn.innerHTML='<span class="spinner"></span>Üretiliyor...';
+  out.textContent='AI düşünüyor...';
+  try{
+    const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    const j=await r.json();
+    out.textContent=j.result;
+  }catch(e){
+    out.textContent='Hata: '+e.message;
+  }finally{
+    btn.disabled=false;
+    btn.textContent=label;
+  }
+}
+</script>
 </body>
-</html>
-"""
+</html>"""
 
 @app.route('/')
 def index():
     return render_template_string(HTML)
 
-# Mevcut route'lar + yeniler
+@app.route('/vize', methods=['POST'])
+def do_vize():
+    try:
+        d = request.json
+        return jsonify(result=llm(
+            "ABD'de yaşayan Türkler için göçmenlik uzmanısın. Türkçe, pratik, adım adım yaz.",
+            f"{d['tip']} vizesi için rehber. State: {d.get('state','ABD')}. Durum: {d.get('durum','')}. Gerekli belgeler, formlar, ücretler, sık hatalar, faydalı linkler."
+        ))
+    except Exception:
+        return jsonify(result=traceback.format_exc())
+
+@app.route('/vergi', methods=['POST'])
+def do_vergi():
+    try:
+        d = request.json
+        return jsonify(result=llm(
+            "ABD vergi uzmanısın, Türk göçmenlere Türkçe ve sade anlat.",
+            f"Form: {d['form']}. Kazanç: ${d.get('kazanc',0)}. Vize: {d.get('vize','')}. State: {d.get('state','')}. Adım adım doldurma rehberi, iade tahmini, deadline'lar, Free File linkleri."
+        ))
+    except Exception:
+        return jsonify(result=traceback.format_exc())
+
 @app.route('/rideshare', methods=['POST'])
 def do_rideshare():
-    d = request.json
-    return jsonify(result=llm("Rideshare vergi uzmanı.", f"{d['app']} için {d.get('kazanc','')} kazanç vergi rehberi. 1099, masraflar, iade."))
-
-@app.route('/saglik', methods=['POST'])
-def do_saglik():
-    d = request.json
-    return jsonify(result=llm("Sağlık sigortası uzmanı.", f"{d.get('state','')} ücretsiz sağlık sigortası, Medicaid, clinic rehberi."))
-
-@app.route('/telefon', methods=['POST'])
-def do_telefon():
-    return jsonify(result=llm("Tech uzmanı.", "Google Voice ücretsiz telefon rehberi, SSN olmadan."))
+    try:
+        d = request.json
+        return jsonify(result=llm(
+            "Rideshare ve gig economy uzmanısın, Türkçe pratik rehber ver.",
+            f"{d['app']} için {d.get('state','')} rehberi. Konu: {d.get('konu','')}. Belgeler, kazanç hesabı, vergi, ipuçları."
+        ))
+    except Exception:
+        return jsonify(result=traceback.format_exc())
 
 @app.route('/ev', methods=['POST'])
 def do_ev():
-    d = request.json
-    return jsonify(result=llm("Emlak uzmanı.", f"{d.get('sehir','')} {d.get('butce','')} bütçe ev kiralama rehberi."))
+    try:
+        d = request.json
+        return jsonify(result=llm(
+            "ABD emlak ve kiralama uzmanısın, Türkçe yaz.",
+            f"{d.get('sehir','')} bölgesinde ${d.get('butce','')} bütçeyle ev arama. Durum: {d.get('durum','')}. Siteler, belgeler, müzakere tüyoları, dikkat edilecekler."
+        ))
+    except Exception:
+        return jsonify(result=traceback.format_exc())
 
-@app.route('/arac', methods=['POST'])
-def do_arac():
-    d = request.json
-    return jsonify(result=llm("Otomotiv uzmanı.", f"{d.get('state','')} araç kiralama/satın alma, sigorta."))
-
-@app.route('/banka', methods=['POST'])
-def do_banka():
-    return jsonify(result=llm("Finans uzmanı.", "SSN/ITIN ile banka hesabı açma rehberi, Türkler için."))
-
-@app.route('/ucak', methods=['POST'])
-def do_ucak():
-    d = request.json
-    return jsonify(result=llm("Seyahat uzmanı.", f"{d.get('havayolu','')} bagaj ücretleri, check-in rehberi."))
-
-@app.route('/wise', methods=['POST'])
-def do_wise():
-    return jsonify(result=llm("Para transfer uzmanı.", "Wise ile Türkiye-ABD para gönderme, limitler, ücretler."))
+@app.route('/saglik', methods=['POST'])
+def do_saglik():
+    try:
+        d = request.json
+        return jsonify(result=llm(
+            "ABD sağlık sistemi uzmanısın, Türkçe ve pratik yaz.",
+            f"{d.get('state','')} için: {d.get('durum','')}. Adresler, başvuru adımları, belgeler, Medicaid limitleri, ücretsiz klinikler."
+        ))
+    except Exception:
+        return jsonify(result=traceback.format_exc())
 
 @app.route('/ehliyet', methods=['POST'])
 def do_ehliyet():
-    d = request.json
-    return jsonify(result=llm("DMV uzmanı.", f"{d.get('state','')} ehliyet alma, belgeler, test."))
+    try:
+        d = request.json
+        return jsonify(result=llm(
+            "ABD DMV ve ehliyet uzmanısın, Türkçe adım adım anlat.",
+            f"{d.get('state','')} eyaletinde ehliyet: {d.get('durum','')}. 6 Points belgeler, sınav hazırlığı, randevu alma, ücretler."
+        ))
+    except Exception:
+        return jsonify(result=traceback.format_exc())
+
+@app.route('/banka', methods=['POST'])
+def do_banka():
+    try:
+        d = request.json
+        return jsonify(result=llm(
+            "ABD finans ve bankacılık uzmanısın, Türkçe yaz.",
+            f"Konu: {d.get('durum','')}. Hangi banka, gerekli belgeler, credit score nasıl başlatılır, secured card önerisi."
+        ))
+    except Exception:
+        return jsonify(result=traceback.format_exc())
+
+@app.route('/telefon', methods=['POST'])
+def do_telefon():
+    try:
+        d = request.json
+        return jsonify(result=llm(
+            "ABD telekomünikasyon uzmanısın, Türkçe pratik rehber ver.",
+            f"Konu: {d.get('konu','')}. Adım adım kurulum, fiyatlar, alternatifler, Türkiye'yi arama uygulamaları."
+        ))
+    except Exception:
+        return jsonify(result=traceback.format_exc())
+
+@app.route('/arac', methods=['POST'])
+def do_arac():
+    try:
+        d = request.json
+        return jsonify(result=llm(
+            "ABD otomotiv ve sigorta uzmanısın, Türkçe yaz.",
+            f"{d.get('state','')} eyaletinde: {d.get('konu','')}. Belgeler, sigorta, fiyat aralığı, CarMax / Carvana önerisi."
+        ))
+    except Exception:
+        return jsonify(result=traceback.format_exc())
+
+@app.route('/wise', methods=['POST'])
+def do_wise():
+    try:
+        d = request.json
+        return jsonify(result=llm(
+            "Uluslararası para transferi uzmanısın, Türkçe anlat.",
+            f"Konu: {d.get('konu','')}. Adım adım rehber, komisyonlar, limitler, alternatifler, dikkat edilecek şeyler."
+        ))
+    except Exception:
+        return jsonify(result=traceback.format_exc())
+
+@app.route('/ucak', methods=['POST'])
+def do_ucak():
+    try:
+        d = request.json
+        return jsonify(result=llm(
+            "Havacılık ve seyahat uzmanısın, Türkçe pratik rehber ver.",
+            f"{d.get('havayolu','')} için: {d.get('konu','')}. Detaylı bilgi, ücretler, ipuçları."
+        ))
+    except Exception:
+        return jsonify(result=traceback.format_exc())
+
+@app.route('/sorgu', methods=['POST'])
+def do_sorgu():
+    try:
+        d = request.json
+        return jsonify(result=llm(
+            "Abdyasam.blogspot.com gibi ABD'deki Türkler için pratik rehber uzmanısın. Türkçe, net, adım adım cevapla.",
+            d.get('soru', '')
+        ))
+    except Exception:
+        return jsonify(result=traceback.format_exc())
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
