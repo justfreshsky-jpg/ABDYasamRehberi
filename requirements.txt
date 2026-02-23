@@ -1,3 +1,4 @@
 flask
 gunicorn
-groq==0.4.0
+groq
+httpx==0.27.2
