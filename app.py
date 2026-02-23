@@ -1,23 +1,93 @@
 import os
-os.environ['HTTPX_PROXIES'] = 'null'
 import traceback
+import requests
+import threading
+import time
+from bs4 import BeautifulSoup
 from flask import Flask, request, jsonify, render_template_string
 from groq import Groq
+os.environ['HTTPX_PROXIES'] = 'null'
 
 app = Flask(__name__)
 GROQ_KEY = os.environ.get('GROQ_KEY')
 client = Groq(api_key=GROQ_KEY) if GROQ_KEY else None
 
+# ─── ARKA PLANDA BLOG İÇERİĞİ ─────────────────────────────
+_cache = {"content": "", "last": 0}
+
+FALLBACK = """
+[VERGİ] Rideshare vergi formları Ocak sonu yayınlanır. 1099-K, 1099-NEC gerekli.
+W-4 doldururken exempt yazma, iade kaybedersin.
+[VİZE] F-1 ile komşu ülkelere gidilebilir (Automatic Visa Revalidation).
+J-1 vize başvurusu: DS-2019 al, SEVIS öde, konsolosluk randevusu.
+[TELEFON] Lifeline programı ile ücretsiz hat alınabilir.
+Google Voice ile SSN olmadan ABD numarası.
+[SAĞLIK] NJ Medicaid gelir düşükse ücretsiz. NY'de free clinic'ler mevcut.
+[BANKA] Chase ve BofA pasaportla hesap açılıyor. Secured card ile kredi skoru başlatılır.
+[RİDESHARE] Uber/Lyft için SSN + ehliyet + araç sigorta şart. 1099 formunu Ocak'ta bekle.
+[EV] NJ Newark/Paterson 1+1 $900-1200. Craigslist, Zillow, Facebook Marketplace dene.
+[WİSE] Türkiye transferi limitlerde $50k/yıl. Wise > Western Union.
+[EHLİYET] NJ'de 6 Points of ID sistemi. Undocumented bile ehliyet alabilir.
+[UÇAK] THY NJ-İstanbul $400-700. Bagaj fazlasını uçuştan 24 saat önce öde ucuza.
+"""
+
+def _fetch_blog():
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
+            "Accept-Language": "tr-TR,tr;q=0.9",
+            "Referer": "https://www.google.com/"
+        }
+        urls = [
+            "https://abdyasam.blogspot.com/",
+            "https://abdyasam.blogspot.com/search?max-results=20"
+        ]
+        combined = ""
+        for url in urls:
+            r = requests.get(url, headers=headers, timeout=8)
+            soup = BeautifulSoup(r.text, "html.parser")
+            for tag in soup(["script", "style", "nav", "header", "footer"]):
+                tag.decompose()
+            posts = soup.find_all("div", class_=lambda c: c and "post" in c.lower())
+            for p in posts[:15]:
+                text = p.get_text(separator=" ", strip=True)
+                if len(text) > 100:
+                    combined += text[:800] + "\n---\n"
+        if combined:
+            _cache["content"] = combined[:6000]
+            _cache["last"] = time.time()
+    except Exception:
+        _cache["content"] = FALLBACK
+
+def _bg_refresh():
+    while True:
+        _fetch_blog()
+        time.sleep(3600)  # Her 1 saatte güncelle
+
+threading.Thread(target=_bg_refresh, daemon=True).start()
+
+def get_context():
+    if not _cache["content"]:
+        return FALLBACK
+    return _cache["content"]
+
+# ─── AI ─────────────────────────────────────────────
 def llm(system, user):
     if not client:
-        return "GROQ_KEY eksik. Render'da Environment Variables kısmına ekle."
+        return "GROQ_KEY eksik. Render > Environment Variables'a ekle."
+    full_system = system + "\n\nPratik kaynak bilgileri:\n" + get_context()
     r = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
-        messages=[{"role":"system","content":system},{"role":"user","content":user}],
-        max_tokens=2000, temperature=0.7
+        messages=[
+            {"role": "system", "content": full_system},
+            {"role": "user", "content": user}
+        ],
+        max_tokens=2000,
+        temperature=0.7
     )
     return r.choices[0].message.content
 
+# ─── HTML ─────────────────────────────────────────────
 HTML = """<!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -32,11 +102,11 @@ body{font-family:Segoe UI,Arial,sans-serif;background:#f0f4ff;color:#1e293b}
 .hero p{font-size:1.1em;opacity:.9;max-width:600px;margin:0 auto 16px}
 .steps{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;margin-top:12px}
 .step{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:6px 16px;font-size:.9em}
-.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;max-width:1000px;margin:30px auto;padding:0 20px}
+.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;max-width:1000px;margin:30px auto;padding:0 20px}
 .feat{background:#fff;border-radius:14px;padding:20px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.08);border-top:4px solid #3b82f6;transition:transform .3s}
 .feat:hover{transform:translateY(-6px)}
 .feat i{font-size:2em;color:#1e40af;margin-bottom:8px}
-.feat h3{font-size:1em;margin-bottom:4px;color:#1e293b}
+.feat h3{font-size:1em;margin-bottom:4px}
 .feat p{font-size:.82em;color:#64748b}
 .container{max-width:900px;margin:0 auto;padding:20px}
 .tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:24px 0}
@@ -68,11 +138,10 @@ textarea{resize:vertical;min-height:90px}
 .output-wrap:hover .copy-btn{opacity:1}
 .spinner{display:inline-block;width:16px;height:16px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
-.footer{text-align:center;padding:32px 20px;color:#64748b;font-size:.88em;line-height:2;margin-top:20px}
+.footer{text-align:center;padding:32px 20px;color:#64748b;font-size:.88em;line-height:2;background:#fff;margin-top:20px;border-radius:16px}
 </style>
 </head>
 <body>
-
 <div class="hero">
   <h1>🇺🇸 ABD'ye Hoş Geldin!</h1>
   <p>Türkler için pratik AI rehberi — sıfırdan adım adım</p>
@@ -84,16 +153,14 @@ textarea{resize:vertical;min-height:90px}
     <span class="step">5️⃣ Çalış / Para Kazan</span>
   </div>
 </div>
-
 <div class="features">
   <div class="feat"><i class="fas fa-passport"></i><h3>Vize & Green Card</h3><p>J-1, H1B, E-2</p></div>
   <div class="feat"><i class="fas fa-calculator"></i><h3>Vergi İadesi</h3><p>$500-2000 geri al</p></div>
   <div class="feat"><i class="fas fa-car"></i><h3>Rideshare</h3><p>Uber/Lyft başla</p></div>
-  <div class="feat"><i class="fas fa-home"></i><h3>Ucuz Ev</h3><p>NJ $800 kiralık</p></div>
+  <div class="feat"><i class="fas fa-home"></i><h3>Ucuz Ev</h3><p>NJ $900 kiralık</p></div>
   <div class="feat"><i class="fas fa-heartbeat"></i><h3>Ücretsiz Sağlık</h3><p>Medicaid, free clinic</p></div>
   <div class="feat"><i class="fas fa-university"></i><h3>Banka Aç</h3><p>SSN olmadan</p></div>
 </div>
-
 <div class="container">
   <div class="tabs">
     <button class="active" onclick="show('vize',this)"><i class="fas fa-passport"></i>Vize</button>
@@ -110,176 +177,138 @@ textarea{resize:vertical;min-height:90px}
     <button onclick="show('sorgu',this)"><i class="fas fa-question-circle"></i>Soru Sor</button>
   </div>
 
-  <!-- VİZE -->
-  <div id="vize" class="tab active">
-    <div class="card">
-      <h2><i class="fas fa-passport"></i> Vize & Green Card</h2>
-      <div class="hint">🎯 <strong>Yeni gelen için:</strong> J-1 ile başla, iş bulunca H1B'e geç. Her adım burada.</div>
-      <div class="form-row">
-        <div class="field"><label>Vize Tipi</label><select id="v1"><option>J-1 Öğrenci</option><option>H-1B İş</option><option>E-2 Yatırım</option><option>Yeşil Kart (EB)</option><option>Ziyaretçi B-2</option><option>F-1 Öğrenci</option></select></div>
-        <div class="field"><label>Hangi State'desin?</label><input id="v2" placeholder="örn. New Jersey"></div>
-      </div>
-      <div class="field"><label>Özel Durum (isteğe bağlı)</label><input id="v3" placeholder="örn. İlk kez başvuru, uzatma, reddedildim"></div>
-      <button class="btn" id="vb" onclick="call('/vize',{tip:g('v1'),state:g('v2'),durum:g('v3')},'vo','vb','Vize Rehberi Oluştur')">Vize Rehberi Oluştur</button>
-      <div class="output-wrap"><div id="vo" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('vo')">Kopyala</button></div>
+  <div id="vize" class="tab active"><div class="card">
+    <h2><i class="fas fa-passport"></i> Vize & Green Card</h2>
+    <div class="hint">🎯 <strong>Yeni gelen için:</strong> J-1 ile başla, iş bulunca H1B'e geç.</div>
+    <div class="form-row">
+      <div class="field"><label>Vize Tipi</label><select id="v1"><option>J-1 Öğrenci</option><option>H-1B İş</option><option>E-2 Yatırım</option><option>Yeşil Kart (EB)</option><option>F-1 Öğrenci</option><option>Ziyaretçi B-2</option></select></div>
+      <div class="field"><label>State</label><input id="v2" placeholder="örn. New Jersey"></div>
     </div>
-  </div>
+    <div class="field"><label>Özel Durum</label><input id="v3" placeholder="örn. İlk başvuru, uzatma, reddedildim"></div>
+    <button class="btn" id="vb" onclick="call('/vize',{tip:g('v1'),state:g('v2'),durum:g('v3')},'vo','vb','Vize Rehberi Oluştur')">Vize Rehberi Oluştur</button>
+    <div class="output-wrap"><div id="vo" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('vo')">Kopyala</button></div>
+  </div></div>
 
-  <!-- VERGİ -->
-  <div id="vergi" class="tab">
-    <div class="card">
-      <h2><i class="fas fa-calculator"></i> Vergi İadesi & Formlar</h2>
-      <div class="hint">💰 <strong>Bilmesi gereken:</strong> İlk yıl 1040NR doldur. Rideshare varsa 1099 da ekle. Ortalama $500-2000 iade alırsın.</div>
-      <div class="form-row">
-        <div class="field"><label>Form Tipi</label><select id="t1"><option>W-4 (Bordro)</option><option>1040NR (Uluslararası)</option><option>1099-K (Rideshare)</option><option>W-2 (Çalışan)</option></select></div>
-        <div class="field"><label>Yıllık Kazanç ($)</label><input id="t2" type="number" placeholder="örn. 35000"></div>
-      </div>
-      <div class="form-row">
-        <div class="field"><label>Vize Tipin</label><select id="t3"><option>F-1 / J-1</option><option>H-1B</option><option>Green Card</option><option>Vatandaş</option></select></div>
-        <div class="field"><label>State</label><input id="t4" placeholder="New Jersey"></div>
-      </div>
-      <button class="btn" id="tb" onclick="call('/vergi',{form:g('t1'),kazanc:g('t2'),vize:g('t3'),state:g('t4')},'to','tb','Vergi Rehberi Oluştur')">Vergi Rehberi Oluştur</button>
-      <div class="output-wrap"><div id="to" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('to')">Kopyala</button></div>
+  <div id="vergi" class="tab"><div class="card">
+    <h2><i class="fas fa-calculator"></i> Vergi İadesi & Formlar</h2>
+    <div class="hint">💰 <strong>İpucu:</strong> İlk yıl 1040NR doldur. Rideshare varsa 1099 da ekle.</div>
+    <div class="form-row">
+      <div class="field"><label>Form Tipi</label><select id="t1"><option>W-4 (Bordro)</option><option>1040NR (Uluslararası)</option><option>1099-K (Rideshare)</option><option>W-2 (Çalışan)</option></select></div>
+      <div class="field"><label>Yıllık Kazanç ($)</label><input id="t2" type="number" placeholder="örn. 35000"></div>
     </div>
-  </div>
+    <div class="form-row">
+      <div class="field"><label>Vize Tipin</label><select id="t3"><option>F-1 / J-1</option><option>H-1B</option><option>Green Card</option><option>Vatandaş</option></select></div>
+      <div class="field"><label>State</label><input id="t4" placeholder="New Jersey"></div>
+    </div>
+    <button class="btn" id="tb" onclick="call('/vergi',{form:g('t1'),kazanc:g('t2'),vize:g('t3'),state:g('t4')},'to','tb','Vergi Rehberi Oluştur')">Vergi Rehberi Oluştur</button>
+    <div class="output-wrap"><div id="to" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('to')">Kopyala</button></div>
+  </div></div>
 
-  <!-- RİDESHARE -->
-  <div id="rideshare" class="tab">
-    <div class="card">
-      <h2><i class="fas fa-car"></i> Uber / Lyft ile Para Kazan</h2>
-      <div class="hint">🚗 <strong>Yeni gelen için:</strong> Ehliyet + araba + SSN yeter. Haftada $800-1500 kazanabilirsin.</div>
-      <div class="form-row">
-        <div class="field"><label>Uygulama</label><select id="r1"><option>Uber</option><option>Lyft</option><option>Her İkisi</option></select></div>
-        <div class="field"><label>State</label><input id="r2" placeholder="New Jersey"></div>
-      </div>
-      <div class="field"><label>Konu</label><select id="r3"><option>Nasıl başlarım?</option><option>1099 formu / vergi</option><option>Haftada ne kadar kazanırım?</option><option>Masraf düşüm (deduction)</option></select></div>
-      <button class="btn" id="rb" onclick="call('/rideshare',{app:g('r1'),state:g('r2'),konu:g('r3')},'ro','rb','Rideshare Rehberi')">Rehber Oluştur</button>
-      <div class="output-wrap"><div id="ro" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('ro')">Kopyala</button></div>
+  <div id="rideshare" class="tab"><div class="card">
+    <h2><i class="fas fa-car"></i> Uber / Lyft ile Para Kazan</h2>
+    <div class="hint">🚗 <strong>Yeni gelen için:</strong> Ehliyet + araba + SSN yeter. Haftada $800-1500.</div>
+    <div class="form-row">
+      <div class="field"><label>Uygulama</label><select id="r1"><option>Uber</option><option>Lyft</option><option>Her İkisi</option></select></div>
+      <div class="field"><label>State</label><input id="r2" placeholder="New Jersey"></div>
     </div>
-  </div>
+    <div class="field"><label>Konu</label><select id="r3"><option>Nasıl başlarım?</option><option>1099 formu / vergi</option><option>Haftada ne kadar kazanırım?</option><option>Masraf düşümü (deduction)</option></select></div>
+    <button class="btn" id="rb" onclick="call('/rideshare',{app:g('r1'),state:g('r2'),konu:g('r3')},'ro','rb','Rideshare Rehberi')">Rehber Oluştur</button>
+    <div class="output-wrap"><div id="ro" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('ro')">Kopyala</button></div>
+  </div></div>
 
-  <!-- EV -->
-  <div id="ev" class="tab">
-    <div class="card">
-      <h2><i class="fas fa-home"></i> Ev / Daire Kiralama</h2>
-      <div class="hint">🏠 <strong>İpucu:</strong> NJ'de Newark, Paterson gibi şehirlerde 1+1 daireler $900-1200. Craigslist ve Zillow dene.</div>
-      <div class="form-row">
-        <div class="field"><label>Şehir / Bölge</label><input id="e1" placeholder="örn. Newark NJ, Jersey City"></div>
-        <div class="field"><label>Bütçe ($/ay)</label><input id="e2" type="number" placeholder="1200"></div>
-      </div>
-      <div class="field"><label>Özel Durum</label><input id="e3" placeholder="örn. SSN yok, kredi skoru yok, evcil hayvan var"></div>
-      <button class="btn" id="eb" onclick="call('/ev',{sehir:g('e1'),butce:g('e2'),durum:g('e3')},'eo','eb','Ev Bulma Rehberi')">Rehber Oluştur</button>
-      <div class="output-wrap"><div id="eo" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('eo')">Kopyala</button></div>
+  <div id="ev" class="tab"><div class="card">
+    <h2><i class="fas fa-home"></i> Ev / Daire Kiralama</h2>
+    <div class="hint">🏠 <strong>İpucu:</strong> NJ Newark/Paterson 1+1 $900-1200. Craigslist ve Zillow dene.</div>
+    <div class="form-row">
+      <div class="field"><label>Şehir / Bölge</label><input id="e1" placeholder="örn. Newark NJ, Jersey City"></div>
+      <div class="field"><label>Bütçe ($/ay)</label><input id="e2" type="number" placeholder="1200"></div>
     </div>
-  </div>
+    <div class="field"><label>Özel Durum</label><input id="e3" placeholder="örn. SSN yok, kredi skoru yok, evcil hayvan var"></div>
+    <button class="btn" id="eb" onclick="call('/ev',{sehir:g('e1'),butce:g('e2'),durum:g('e3')},'eo','eb','Ev Bulma Rehberi')">Rehber Oluştur</button>
+    <div class="output-wrap"><div id="eo" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('eo')">Kopyala</button></div>
+  </div></div>
 
-  <!-- SAĞLIK -->
-  <div id="saglik" class="tab">
-    <div class="card">
-      <h2><i class="fas fa-heartbeat"></i> Ücretsiz Sağlık Sigortası</h2>
-      <div class="hint">🏥 <strong>Bilmesi gereken:</strong> NJ'de düşük gelirle Medicaid ücretsiz. Doküman lazım değil bazı kliniklerde.</div>
-      <div class="form-row">
-        <div class="field"><label>State</label><input id="h1" placeholder="New Jersey"></div>
-        <div class="field"><label>Durum</label><select id="h2"><option>Sigorta yok, nasıl alırım?</option><option>Medicaid nasıl başvururum?</option><option>Ücretsiz klinik nerede?</option><option>SSN olmadan sigorta?</option></select></div>
-      </div>
-      <button class="btn" id="hb" onclick="call('/saglik',{state:g('h1'),durum:g('h2')},'ho','hb','Sağlık Rehberi')">Rehber Oluştur</button>
-      <div class="output-wrap"><div id="ho" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('ho')">Kopyala</button></div>
+  <div id="saglik" class="tab"><div class="card">
+    <h2><i class="fas fa-heartbeat"></i> Ücretsiz Sağlık Sigortası</h2>
+    <div class="hint">🏥 <strong>İpucu:</strong> NJ'de düşük gelirle Medicaid ücretsiz. Bazı kliniklerde belge gerekmez.</div>
+    <div class="form-row">
+      <div class="field"><label>State</label><input id="h1" placeholder="New Jersey"></div>
+      <div class="field"><label>Durum</label><select id="h2"><option>Sigorta yok, nasıl alırım?</option><option>Medicaid nasıl başvururum?</option><option>Ücretsiz klinik nerede?</option><option>SSN olmadan sigorta olur mu?</option></select></div>
     </div>
-  </div>
+    <button class="btn" id="hb" onclick="call('/saglik',{state:g('h1'),durum:g('h2')},'ho','hb','Sağlık Rehberi')">Rehber Oluştur</button>
+    <div class="output-wrap"><div id="ho" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('ho')">Kopyala</button></div>
+  </div></div>
 
-  <!-- EHLİYET -->
-  <div id="ehliyet" class="tab">
-    <div class="card">
-      <h2><i class="fas fa-id-card"></i> Ehliyet Alma (DMV)</h2>
-      <div class="hint">🪪 <strong>İpucu:</strong> NJ'de undocumented bile ehliyet alabiliyor. 6 Points of ID sistemi var.</div>
-      <div class="form-row">
-        <div class="field"><label>State</label><input id="l1" placeholder="New Jersey"></div>
-        <div class="field"><label>Durum</label><select id="l2"><option>İlk kez alıyorum</option><option>Türk ehliyetimi çevirmek istiyorum</option><option>SSN / ITIN yok</option><option>Real ID lazım</option></select></div>
-      </div>
-      <button class="btn" id="lb" onclick="call('/ehliyet',{state:g('l1'),durum:g('l2')},'lo','lb','Ehliyet Rehberi')">Rehber Oluştur</button>
-      <div class="output-wrap"><div id="lo" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('lo')">Kopyala</button></div>
+  <div id="ehliyet" class="tab"><div class="card">
+    <h2><i class="fas fa-id-card"></i> Ehliyet Alma (DMV)</h2>
+    <div class="hint">🪪 <strong>İpucu:</strong> NJ'de 6 Points of ID sistemi. Undocumented bile ehliyet alabiliyor.</div>
+    <div class="form-row">
+      <div class="field"><label>State</label><input id="l1" placeholder="New Jersey"></div>
+      <div class="field"><label>Durum</label><select id="l2"><option>İlk kez alıyorum</option><option>Türk ehliyetimi çevirmek istiyorum</option><option>SSN / ITIN yok</option><option>Real ID lazım</option></select></div>
     </div>
-  </div>
+    <button class="btn" id="lb" onclick="call('/ehliyet',{state:g('l1'),durum:g('l2')},'lo','lb','Ehliyet Rehberi')">Rehber Oluştur</button>
+    <div class="output-wrap"><div id="lo" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('lo')">Kopyala</button></div>
+  </div></div>
 
-  <!-- BANKA -->
-  <div id="banka" class="tab">
-    <div class="card">
-      <h2><i class="fas fa-university"></i> Banka Hesabı Açma</h2>
-      <div class="hint">💳 <strong>İpucu:</strong> Chase, Bank of America pasaport ile açılıyor. Wise / Zelle için de hesap şart.</div>
-      <div class="field"><label>Durum</label><select id="ba1"><option>SSN olmadan banka açmak istiyorum</option><option>Kredi kartı almak istiyorum</option><option>Credit score sıfırdan nasıl yaparım?</option><option>En iyi ücretsiz banka hangisi?</option></select></div>
-      <button class="btn" id="bb" onclick="call('/banka',{durum:g('ba1')},'bo','bb','Banka Rehberi')">Rehber Oluştur</button>
-      <div class="output-wrap"><div id="bo" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('bo')">Kopyala</button></div>
-    </div>
-  </div>
+  <div id="banka" class="tab"><div class="card">
+    <h2><i class="fas fa-university"></i> Banka Hesabı Açma</h2>
+    <div class="hint">💳 <strong>İpucu:</strong> Chase/BofA pasaportla açılıyor. Secured card ile kredi skoru başlatılır.</div>
+    <div class="field"><label>Durum</label><select id="ba1"><option>SSN olmadan banka açmak istiyorum</option><option>Kredi kartı almak istiyorum</option><option>Credit score sıfırdan nasıl yaparım?</option><option>En iyi ücretsiz banka hangisi?</option></select></div>
+    <button class="btn" id="bb" onclick="call('/banka',{durum:g('ba1')},'bo','bb','Banka Rehberi')">Rehber Oluştur</button>
+    <div class="output-wrap"><div id="bo" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('bo')">Kopyala</button></div>
+  </div></div>
 
-  <!-- TELEFON -->
-  <div id="telefon" class="tab">
-    <div class="card">
-      <h2><i class="fas fa-phone"></i> ABD Telefon Numarası</h2>
-      <div class="hint">📱 <strong>İpucu:</strong> Google Voice ile SSN olmadan ücretsiz Amerikan numarası alabilirsin.</div>
-      <div class="field"><label>Konu</label><select id="p1"><option>Ücretsiz numara (Google Voice)</option><option>Ucuz hat (Mint, Visible, T-Mobile)</option><option>SSN olmadan kontrat hat</option><option>Türkiye'yi ucuz arama</option></select></div>
-      <button class="btn" id="pb" onclick="call('/telefon',{konu:g('p1')},'po','pb','Telefon Rehberi')">Rehber Oluştur</button>
-      <div class="output-wrap"><div id="po" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('po')">Kopyala</button></div>
-    </div>
-  </div>
+  <div id="telefon" class="tab"><div class="card">
+    <h2><i class="fas fa-phone"></i> ABD Telefon Numarası</h2>
+    <div class="hint">📱 <strong>İpucu:</strong> Google Voice ile SSN olmadan ücretsiz Amerikan numarası alabilirsin.</div>
+    <div class="field"><label>Konu</label><select id="p1"><option>Ücretsiz numara (Google Voice)</option><option>Ucuz hat (Mint, Visible, T-Mobile)</option><option>SSN olmadan kontrat hat</option><option>Türkiye'yi ucuz arama</option></select></div>
+    <button class="btn" id="pb" onclick="call('/telefon',{konu:g('p1')},'po','pb','Telefon Rehberi')">Rehber Oluştur</button>
+    <div class="output-wrap"><div id="po" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('po')">Kopyala</button></div>
+  </div></div>
 
-  <!-- ARAÇ -->
-  <div id="arac" class="tab">
-    <div class="card">
-      <h2><i class="fas fa-car-side"></i> Araç Kiralama / Satın Alma</h2>
-      <div class="hint">🚗 <strong>İpucu:</strong> SSN olmadan araç satın alınabiliyor. Turo veya Hertz ile başla.</div>
-      <div class="form-row">
-        <div class="field"><label>State</label><input id="ar1" placeholder="New Jersey"></div>
-        <div class="field"><label>Konu</label><select id="ar2"><option>İkinci el araç almak istiyorum</option><option>Araç kiralamak istiyorum</option><option>Araç sigortası almak istiyorum</option><option>SSN olmadan araç alınır mı?</option></select></div>
-      </div>
-      <button class="btn" id="arb" onclick="call('/arac',{state:g('ar1'),konu:g('ar2')},'aro','arb','Araç Rehberi')">Rehber Oluştur</button>
-      <div class="output-wrap"><div id="aro" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('aro')">Kopyala</button></div>
+  <div id="arac" class="tab"><div class="card">
+    <h2><i class="fas fa-car-side"></i> Araç Kiralama / Satın Alma</h2>
+    <div class="hint">🚗 <strong>İpucu:</strong> SSN olmadan araç satın alınabiliyor. CarMax/Carvana ile başla.</div>
+    <div class="form-row">
+      <div class="field"><label>State</label><input id="ar1" placeholder="New Jersey"></div>
+      <div class="field"><label>Konu</label><select id="ar2"><option>İkinci el araç almak istiyorum</option><option>Araç kiralamak istiyorum</option><option>Araç sigortası almak istiyorum</option><option>SSN olmadan araç alınır mı?</option></select></div>
     </div>
-  </div>
+    <button class="btn" id="arb" onclick="call('/arac',{state:g('ar1'),konu:g('ar2')},'aro','arb','Araç Rehberi')">Rehber Oluştur</button>
+    <div class="output-wrap"><div id="aro" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('aro')">Kopyala</button></div>
+  </div></div>
 
-  <!-- WİSE -->
-  <div id="wise" class="tab">
-    <div class="card">
-      <h2><i class="fas fa-exchange-alt"></i> Para Transfer (Wise / Zelle)</h2>
-      <div class="hint">💸 <strong>İpucu:</strong> Wise ile TL/$ kurunu en düşük komisyonla gönder. Limit $50,000/yıl.</div>
-      <div class="field"><label>Konu</label><select id="w1"><option>Wise ile Türkiye'ye para gönderme</option><option>Wise limitleri ve ücretleri</option><option>Zelle nasıl kullanılır?</option><option>Venmo / CashApp rehberi</option></select></div>
-      <button class="btn" id="wb" onclick="call('/wise',{konu:g('w1')},'wo','wb','Para Transfer Rehberi')">Rehber Oluştur</button>
-      <div class="output-wrap"><div id="wo" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('wo')">Kopyala</button></div>
-    </div>
-  </div>
+  <div id="wise" class="tab"><div class="card">
+    <h2><i class="fas fa-exchange-alt"></i> Para Transfer (Wise / Zelle)</h2>
+    <div class="hint">💸 <strong>İpucu:</strong> Wise ile TL/$ kurunu en düşük komisyonla gönder.</div>
+    <div class="field"><label>Konu</label><select id="w1"><option>Wise ile Türkiye'ye para gönderme</option><option>Wise limitleri ve ücretleri</option><option>Zelle nasıl kullanılır?</option><option>Venmo / CashApp rehberi</option></select></div>
+    <button class="btn" id="wb" onclick="call('/wise',{konu:g('w1')},'wo','wb','Para Transfer Rehberi')">Rehber Oluştur</button>
+    <div class="output-wrap"><div id="wo" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('wo')">Kopyala</button></div>
+  </div></div>
 
-  <!-- UÇAK -->
-  <div id="ucak" class="tab">
-    <div class="card">
-      <h2><i class="fas fa-plane"></i> Uçak & Bagaj</h2>
-      <div class="hint">✈️ <strong>İpucu:</strong> Turkish Airlines ile NJ→İstanbul $400-700. Bagaj fazlası ödeme yerine önceden al.</div>
-      <div class="form-row">
-        <div class="field"><label>Havayolu</label><select id="u1"><option>Turkish Airlines</option><option>American Airlines</option><option>United</option><option>Delta</option><option>Diğer</option></select></div>
-        <div class="field"><label>Konu</label><select id="u2"><option>Bagaj ücretleri ve kurallar</option><option>En ucuz bilet nasıl bulunur?</option><option>Check-in rehberi</option><option>Refund / iptal kuralları</option></select></div>
-      </div>
-      <button class="btn" id="ub" onclick="call('/ucak',{havayolu:g('u1'),konu:g('u2')},'uo','ub','Uçak Rehberi')">Rehber Oluştur</button>
-      <div class="output-wrap"><div id="uo" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('uo')">Kopyala</button></div>
+  <div id="ucak" class="tab"><div class="card">
+    <h2><i class="fas fa-plane"></i> Uçak & Bagaj</h2>
+    <div class="hint">✈️ <strong>İpucu:</strong> THY NJ-İstanbul $400-700. Bagaj fazlasını 24 saat önce öde ucuza.</div>
+    <div class="form-row">
+      <div class="field"><label>Havayolu</label><select id="u1"><option>Turkish Airlines</option><option>American Airlines</option><option>United</option><option>Delta</option></select></div>
+      <div class="field"><label>Konu</label><select id="u2"><option>Bagaj ücretleri ve kurallar</option><option>En ucuz bilet nasıl bulunur?</option><option>Check-in rehberi</option><option>Refund / iptal kuralları</option></select></div>
     </div>
-  </div>
+    <button class="btn" id="ub" onclick="call('/ucak',{havayolu:g('u1'),konu:g('u2')},'uo','ub','Uçak Rehberi')">Rehber Oluştur</button>
+    <div class="output-wrap"><div id="uo" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('uo')">Kopyala</button></div>
+  </div></div>
 
-  <!-- SORU SOR -->
-  <div id="sorgu" class="tab">
-    <div class="card">
-      <h2><i class="fas fa-question-circle"></i> Herhangi Bir Soru Sor</h2>
-      <div class="hint">🤖 Abdyasam gibi pratik cevaplar. ABD hayatıyla ilgili aklına takılan her şeyi sor.</div>
-      <div class="field"><label>Sorun nedir?</label><textarea id="q1" rows="4" placeholder="örn. SSN olmadan iş bulabilir miyim? İlk ay ne yapmalıyım?"></textarea></div>
-      <button class="btn" id="qb" onclick="call('/sorgu',{soru:g('q1')},'qo','qb','Cevapla')">Cevapla</button>
-      <div class="output-wrap"><div id="qo" class="output">Cevap burada çıkacak...</div><button class="copy-btn" onclick="cp('qo')">Kopyala</button></div>
-    </div>
-  </div>
+  <div id="sorgu" class="tab"><div class="card">
+    <h2><i class="fas fa-question-circle"></i> Herhangi Bir Soru Sor</h2>
+    <div class="hint">🤖 ABD hayatıyla ilgili aklına takılan her şeyi sor. Türkçe cevap gelir.</div>
+    <div class="field"><label>Sorun nedir?</label><textarea id="q1" rows="4" placeholder="örn. SSN olmadan iş bulabilir miyim? İlk ay ne yapmalıyım?"></textarea></div>
+    <button class="btn" id="qb" onclick="call('/sorgu',{soru:g('q1')},'qo','qb','Cevapla')">Cevapla</button>
+    <div class="output-wrap"><div id="qo" class="output">Cevap burada çıkacak...</div><button class="copy-btn" onclick="cp('qo')">Kopyala</button></div>
+  </div></div>
 
 </div>
-
 <div class="footer">
-  <strong>🇺🇸 ABD Yaşam Rehberi</strong> | Abdyasam inspired | Ücretsiz | NJ odaklı<br>
-  Hiçbir kişisel veri saklanmaz | Sorular sadece AI'a iletilir
+  <strong>🇺🇸 ABD Yaşam Rehberi</strong> | Ücretsiz | NJ Odaklı<br>
+  Hiçbir kişisel veri saklanmaz
 </div>
-
 <script>
 function g(id){return document.getElementById(id).value;}
 function show(tab,btn){
@@ -316,6 +345,7 @@ async function call(endpoint,data,outId,btnId,label){
 </body>
 </html>"""
 
+# ─── ROUTES ──────────────────────────────────────────
 @app.route('/')
 def index():
     return render_template_string(HTML)
@@ -324,133 +354,97 @@ def index():
 def do_vize():
     try:
         d = request.json
-        return jsonify(result=llm(
-            "ABD'de yaşayan Türkler için göçmenlik uzmanısın. Türkçe, pratik, adım adım yaz.",
-            f"{d['tip']} vizesi için rehber. State: {d.get('state','ABD')}. Durum: {d.get('durum','')}. Gerekli belgeler, formlar, ücretler, sık hatalar, faydalı linkler."
-        ))
-    except Exception:
-        return jsonify(result=traceback.format_exc())
+        return jsonify(result=llm("ABD göçmenlik uzmanısın, Türkçe pratik rehber ver.",
+            f"{d['tip']} vizesi. State: {d.get('state','')}. Durum: {d.get('durum','')}. Belgeler, formlar, ücretler, hatalar, linkler."))
+    except Exception: return jsonify(result=traceback.format_exc())
 
 @app.route('/vergi', methods=['POST'])
 def do_vergi():
     try:
         d = request.json
-        return jsonify(result=llm(
-            "ABD vergi uzmanısın, Türk göçmenlere Türkçe ve sade anlat.",
-            f"Form: {d['form']}. Kazanç: ${d.get('kazanc',0)}. Vize: {d.get('vize','')}. State: {d.get('state','')}. Adım adım doldurma rehberi, iade tahmini, deadline'lar, Free File linkleri."
-        ))
-    except Exception:
-        return jsonify(result=traceback.format_exc())
+        return jsonify(result=llm("ABD vergi uzmanısın, Türkçe sade anlat.",
+            f"Form: {d['form']}. Kazanç: ${d.get('kazanc',0)}. Vize: {d.get('vize','')}. State: {d.get('state','')}. Doldurma rehberi, iade tahmini, deadline'lar."))
+    except Exception: return jsonify(result=traceback.format_exc())
 
 @app.route('/rideshare', methods=['POST'])
 def do_rideshare():
     try:
         d = request.json
-        return jsonify(result=llm(
-            "Rideshare ve gig economy uzmanısın, Türkçe pratik rehber ver.",
-            f"{d['app']} için {d.get('state','')} rehberi. Konu: {d.get('konu','')}. Belgeler, kazanç hesabı, vergi, ipuçları."
-        ))
-    except Exception:
-        return jsonify(result=traceback.format_exc())
+        return jsonify(result=llm("Rideshare ve gig economy uzmanısın, Türkçe yaz.",
+            f"{d['app']} - {d.get('state','')}. Konu: {d.get('konu','')}. Belgeler, kazanç, vergi, ipuçları."))
+    except Exception: return jsonify(result=traceback.format_exc())
 
 @app.route('/ev', methods=['POST'])
 def do_ev():
     try:
         d = request.json
-        return jsonify(result=llm(
-            "ABD emlak ve kiralama uzmanısın, Türkçe yaz.",
-            f"{d.get('sehir','')} bölgesinde ${d.get('butce','')} bütçeyle ev arama. Durum: {d.get('durum','')}. Siteler, belgeler, müzakere tüyoları, dikkat edilecekler."
-        ))
-    except Exception:
-        return jsonify(result=traceback.format_exc())
+        return jsonify(result=llm("ABD emlak uzmanısın, Türkçe yaz.",
+            f"{d.get('sehir','')} ${d.get('butce','')} bütçe. Durum: {d.get('durum','')}. Siteler, belgeler, müzakere tüyoları."))
+    except Exception: return jsonify(result=traceback.format_exc())
 
 @app.route('/saglik', methods=['POST'])
 def do_saglik():
     try:
         d = request.json
-        return jsonify(result=llm(
-            "ABD sağlık sistemi uzmanısın, Türkçe ve pratik yaz.",
-            f"{d.get('state','')} için: {d.get('durum','')}. Adresler, başvuru adımları, belgeler, Medicaid limitleri, ücretsiz klinikler."
-        ))
-    except Exception:
-        return jsonify(result=traceback.format_exc())
+        return jsonify(result=llm("ABD sağlık sistemi uzmanısın, Türkçe pratik yaz.",
+            f"{d.get('state','')} - {d.get('durum','')}. Adresler, belgeler, Medicaid, ücretsiz klinikler."))
+    except Exception: return jsonify(result=traceback.format_exc())
 
 @app.route('/ehliyet', methods=['POST'])
 def do_ehliyet():
     try:
         d = request.json
-        return jsonify(result=llm(
-            "ABD DMV ve ehliyet uzmanısın, Türkçe adım adım anlat.",
-            f"{d.get('state','')} eyaletinde ehliyet: {d.get('durum','')}. 6 Points belgeler, sınav hazırlığı, randevu alma, ücretler."
-        ))
-    except Exception:
-        return jsonify(result=traceback.format_exc())
+        return jsonify(result=llm("ABD DMV uzmanısın, Türkçe anlat.",
+            f"{d.get('state','')} ehliyet: {d.get('durum','')}. 6 Points belgeler, sınav, randevu, ücretler."))
+    except Exception: return jsonify(result=traceback.format_exc())
 
 @app.route('/banka', methods=['POST'])
 def do_banka():
     try:
         d = request.json
-        return jsonify(result=llm(
-            "ABD finans ve bankacılık uzmanısın, Türkçe yaz.",
-            f"Konu: {d.get('durum','')}. Hangi banka, gerekli belgeler, credit score nasıl başlatılır, secured card önerisi."
-        ))
-    except Exception:
-        return jsonify(result=traceback.format_exc())
+        return jsonify(result=llm("ABD bankacılık uzmanısın, Türkçe yaz.",
+            f"Konu: {d.get('durum','')}. Hangi banka, belgeler, credit score, secured card."))
+    except Exception: return jsonify(result=traceback.format_exc())
 
 @app.route('/telefon', methods=['POST'])
 def do_telefon():
     try:
         d = request.json
-        return jsonify(result=llm(
-            "ABD telekomünikasyon uzmanısın, Türkçe pratik rehber ver.",
-            f"Konu: {d.get('konu','')}. Adım adım kurulum, fiyatlar, alternatifler, Türkiye'yi arama uygulamaları."
-        ))
-    except Exception:
-        return jsonify(result=traceback.format_exc())
+        return jsonify(result=llm("ABD telekomünikasyon uzmanısın, Türkçe rehber.",
+            f"Konu: {d.get('konu','')}. Adım adım kurulum, fiyatlar, alternatifler."))
+    except Exception: return jsonify(result=traceback.format_exc())
 
 @app.route('/arac', methods=['POST'])
 def do_arac():
     try:
         d = request.json
-        return jsonify(result=llm(
-            "ABD otomotiv ve sigorta uzmanısın, Türkçe yaz.",
-            f"{d.get('state','')} eyaletinde: {d.get('konu','')}. Belgeler, sigorta, fiyat aralığı, CarMax / Carvana önerisi."
-        ))
-    except Exception:
-        return jsonify(result=traceback.format_exc())
+        return jsonify(result=llm("ABD otomotiv uzmanısın, Türkçe yaz.",
+            f"{d.get('state','')} - {d.get('konu','')}. Belgeler, sigorta, fiyat, CarMax/Carvana."))
+    except Exception: return jsonify(result=traceback.format_exc())
 
 @app.route('/wise', methods=['POST'])
 def do_wise():
     try:
         d = request.json
-        return jsonify(result=llm(
-            "Uluslararası para transferi uzmanısın, Türkçe anlat.",
-            f"Konu: {d.get('konu','')}. Adım adım rehber, komisyonlar, limitler, alternatifler, dikkat edilecek şeyler."
-        ))
-    except Exception:
-        return jsonify(result=traceback.format_exc())
+        return jsonify(result=llm("Para transferi uzmanısın, Türkçe anlat.",
+            f"Konu: {d.get('konu','')}. Adımlar, komisyonlar, limitler, alternatifler."))
+    except Exception: return jsonify(result=traceback.format_exc())
 
 @app.route('/ucak', methods=['POST'])
 def do_ucak():
     try:
         d = request.json
-        return jsonify(result=llm(
-            "Havacılık ve seyahat uzmanısın, Türkçe pratik rehber ver.",
-            f"{d.get('havayolu','')} için: {d.get('konu','')}. Detaylı bilgi, ücretler, ipuçları."
-        ))
-    except Exception:
-        return jsonify(result=traceback.format_exc())
+        return jsonify(result=llm("Havacılık uzmanısın, Türkçe pratik rehber.",
+            f"{d.get('havayolu','')} - {d.get('konu','')}. Detaylı bilgi, ücretler, ipuçları."))
+    except Exception: return jsonify(result=traceback.format_exc())
 
 @app.route('/sorgu', methods=['POST'])
 def do_sorgu():
     try:
         d = request.json
-        return jsonify(result=llm(
-            "Abdyasam.blogspot.com gibi ABD'deki Türkler için pratik rehber uzmanısın. Türkçe, net, adım adım cevapla.",
-            d.get('soru', '')
-        ))
-    except Exception:
-        return jsonify(result=traceback.format_exc())
+        return jsonify(result=llm("ABD'deki Türkler için pratik rehber uzmanısın. Türkçe, net, adım adım cevapla.",
+            d.get('soru', '')))
+    except Exception: return jsonify(result=traceback.format_exc())
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
