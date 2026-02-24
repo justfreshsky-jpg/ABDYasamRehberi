@@ -74,20 +74,18 @@ def get_context():
 # ─── AI ─────────────────────────────────────────────
 def llm(system, user):
     if not client:
-        return "❌ GROQ_KEY eksik."
+        return "GROQ_KEY eksik. Render > Environment Variables'a ekle."
+    full_system = system + "\n\nPratik kaynak bilgileri:\n" + get_context()
     r = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
-        messages=[{"role":"system","content":system},{"role":"user","content":user}],
-        max_tokens=2000, temperature=0.7
+        messages=[
+            {"role": "system", "content": full_system},
+            {"role": "user", "content": user}
+        ],
+        max_tokens=2000,
+        temperature=0.7
     )
-    
-    text = r.choices[0].message.content
-    
-    # Sadece başlıklar ve : öncesi bold yap
-    text = re.sub(r'^(.*?)(?=\n|$)', r'<b>\1</b>', text, flags=re.MULTILINE)
-    text = re.sub(r'^(.*?:)(?=\s|$)', r'<b>\1</b>', text, flags=re.MULTILINE)
-    
-    return text.strip()
+    return r.choices[0].message.content
 
 # ─── HTML ─────────────────────────────────────────────
 HTML = """<!DOCTYPE html>
@@ -362,18 +360,16 @@ async function call(endpoint,data,outId,btnId,label){
   const btn=document.getElementById(btnId);
   btn.disabled=true;
   btn.innerHTML='<span class="spinner"></span>Üretiliyor...';
-  
-  // out.textContent='AI düşünüyor...';  ← COMMENT OUT
-  out.innerHTML = 'AI düşünüyor...';     ← YENİ
+  out.textContent='AI düşünüyor...';
   try{
     const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
     const j=await r.json();
-    out.innerHTML = j.result;  ← BU KALIR
+    out.textContent=j.result;
   }catch(e){
-    out.innerHTML='Hata: '+e.message;  ← BURAYI DA DEĞİŞTİR
+    out.textContent='Hata: '+e.message;
   }finally{
     btn.disabled=false;
-    btn.innerHTML=label;
+    btn.textContent=label;
   }
 }
 </script>
