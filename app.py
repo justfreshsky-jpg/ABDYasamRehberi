@@ -74,18 +74,23 @@ def get_context():
 # ─── AI ─────────────────────────────────────────────
 def llm(system, user):
     if not client:
-        return "GROQ_KEY eksik. Render > Environment Variables'a ekle."
-    full_system = system + "\n\nPratik kaynak bilgileri:\n" + get_context()
+        return "❌ GROQ_KEY eksik."
     r = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[
-            {"role": "system", "content": full_system},
-            {"role": "user", "content": user}
+            {"role":"system","content":system + "\n\n⚠️ SADECE TÜRKÇE CEVAP VER. Hiçbir yabancı karakter kullanma."},
+            {"role":"user","content":user}
         ],
-        max_tokens=2000,
+        max_tokens=2000, 
         temperature=0.7
     )
-    return r.choices[0].message.content
+    
+    # Çince/Japonca karakterleri temizle
+    text = r.choices[0].message.content
+    text = ''.join(c for c in text if ord(c) < 128 or c in 'ğüşıöçĞÜŞİÖÇ')  # Sadece ASCII + Türkçe
+    text = text.replace('**', '')  # Bold temizle
+    
+    return text.strip()
 
 # ─── HTML ─────────────────────────────────────────────
 HTML = """<!DOCTYPE html>
