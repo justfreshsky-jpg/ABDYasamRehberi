@@ -75,21 +75,27 @@ def get_context():
 def llm(system, user):
     if not client:
         return "❌ GROQ_KEY eksik."
+    
+    usa_prompt = """
+    🇺🇸 SADECE ABD İLE İLGİLİ CEVAP VER
+    ✅ ABD VİZE / SSN / BANK / EV / UBER / VERGİ / SAĞLIK
+    • Her adıma emoji koy: ✅ 🚀 💰 📱 🏠 🪪 ✈️ 🏥 💳 
+    • ÖNEMLİ kelimeleri YÜKSEK HARF
+    • Kısa paragraf, uzun liste
+    ⚠️ SADECE ABD / NJ / NY, başka ülkeye değinme!
+    """
+    
+    full_system = system + "\n\n" + usa_prompt + "\n\nBlog verisi:\n" + get_context()
+    
     r = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
-        messages=[
-            {"role":"system","content":system + "\n\n⚠️ SADECE LATİN ALFABESİ TÜRKÇE KARAKTERLER KULLAN. Çince Japonca Arapça yasak."},
-            {"role":"user","content":user}
-        ],
-        max_tokens=2000, temperature=0.6  # Temperature düşürüldü
+        messages=[{"role":"system","content":full_system},{"role":"user","content":user}],
+        max_tokens=2000, temperature=0.6
     )
     
-    # Tüm garip karakterleri temizle
     text = r.choices[0].message.content
-    # Sadece Latin + Türkçe tut
-    text = ''.join(c for c in text if ord(c) < 128 or c in 'ğüşıöçĞÜŞİÖÇ')
-    # Bold temizle
     text = text.replace('**', '')
+    text = ''.join(c for c in text if ord(c) < 128 or c in 'ğüşıöçĞÜŞİÖÇ')
     
     return text.strip()
 
