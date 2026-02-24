@@ -153,14 +153,6 @@ textarea{resize:vertical;min-height:90px}
     <span class="step">5️⃣ Çalış / Para Kazan</span>
   </div>
 </div>
-<div class="features">
-  <div class="feat"><i class="fas fa-passport"></i><h3>Vize & Green Card</h3><p>J-1, H1B, E-2</p></div>
-  <div class="feat"><i class="fas fa-calculator"></i><h3>Vergi İadesi</h3><p>$500-2000 geri al</p></div>
-  <div class="feat"><i class="fas fa-car"></i><h3>Rideshare</h3><p>Uber/Lyft başla</p></div>
-  <div class="feat"><i class="fas fa-home"></i><h3>Ucuz Ev</h3><p>NJ $900 kiralık</p></div>
-  <div class="feat"><i class="fas fa-heartbeat"></i><h3>Ücretsiz Sağlık</h3><p>Medicaid, free clinic</p></div>
-  <div class="feat"><i class="fas fa-university"></i><h3>Banka Aç</h3><p>SSN olmadan</p></div>
-</div>
 <div class="container">
   <div class="tabs">
     <button class="active" onclick="show('vize',this)"><i class="fas fa-passport"></i>Vize</button>
@@ -306,7 +298,7 @@ textarea{resize:vertical;min-height:90px}
 
 </div>
 <div class="footer">
-  <strong>🇺🇸 ABD Yaşam Rehberi</strong> | NJ Odaklı<br>
+  <strong>🇺🇸 ABD Yaşam Rehberi</strong><br>
   Hiçbir kişisel veri saklanmaz<br>
   <span style="font-size:.8em;color:#94a3b8">
     ⚠️ Bu araç yalnızca bilgilendirme amaçlıdır. Yapay zeka hata yapabilir.
