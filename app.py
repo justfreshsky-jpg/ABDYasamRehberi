@@ -83,8 +83,9 @@ def llm(system, user):
     
     text = r.choices[0].message.content
     
-    # Bold yapıcı (sadece bu satır)
-    text = text.replace('**', '<b>')
+    # Sadece başlıklar ve : öncesi bold yap
+    text = re.sub(r'^(.*?)(?=\n|$)', r'<b>\1</b>', text, flags=re.MULTILINE)
+    text = re.sub(r'^(.*?:)(?=\s|$)', r'<b>\1</b>', text, flags=re.MULTILINE)
     
     return text.strip()
 
@@ -361,16 +362,18 @@ async function call(endpoint,data,outId,btnId,label){
   const btn=document.getElementById(btnId);
   btn.disabled=true;
   btn.innerHTML='<span class="spinner"></span>Üretiliyor...';
-  out.textContent='AI düşünüyor...';
+  
+  // out.textContent='AI düşünüyor...';  ← COMMENT OUT
+  out.innerHTML = 'AI düşünüyor...';     ← YENİ
   try{
     const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
     const j=await r.json();
-    out.innerHTML = j.result;
+    out.innerHTML = j.result;  ← BU KALIR
   }catch(e){
-    out.textContent='Hata: '+e.message;
+    out.innerHTML='Hata: '+e.message;  ← BURAYI DA DEĞİŞTİR
   }finally{
     btn.disabled=false;
-    btn.textContent=label;
+    btn.innerHTML=label;
   }
 }
 </script>
