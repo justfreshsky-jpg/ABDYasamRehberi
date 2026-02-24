@@ -157,14 +157,15 @@ textarea{resize:vertical;min-height:90px}
   <div class="tabs">
     <button class="active" onclick="show('vize',this)"><i class="fas fa-passport"></i>Vize</button>
     <button onclick="show('vergi',this)"><i class="fas fa-calculator"></i>Vergi</button>
-    <button onclick="show('rideshare',this)"><i class="fas fa-car"></i>Rideshare</button>
-    <button onclick="show('ev',this)"><i class="fas fa-home"></i>Ev</button>
+    <button onclick="show('rideshare',this)"><i class="fas fa-car"></i>İş (Rideshare)</button>
+    <button onclick="show('ev',this)"><i class="fas fa-home"></i>Ev Bluma</button>
     <button onclick="show('saglik',this)"><i class="fas fa-heartbeat"></i>Sağlık</button>
     <button onclick="show('ehliyet',this)"><i class="fas fa-id-card"></i>Ehliyet</button>
+    <button onclick="show('ssn',this)"><i class="fas fa-id-card-alt"></i>SSN</button>
     <button onclick="show('banka',this)"><i class="fas fa-university"></i>Banka</button>
     <button onclick="show('telefon',this)"><i class="fas fa-phone"></i>Telefon</button>
-    <button onclick="show('arac',this)"><i class="fas fa-car-side"></i>Araç</button>
-    <button onclick="show('wise',this)"><i class="fas fa-exchange-alt"></i>Wise</button>
+    <button onclick="show('arac',this)"><i class="fas fa-car-side"></i>Araç Bulma</button>
+    <button onclick="show('wise',this)"><i class="fas fa-exchange-alt"></i>Para Transferi</button>
     <button onclick="show('ucak',this)"><i class="fas fa-plane"></i>Uçak</button>
     <button onclick="show('sorgu',this)"><i class="fas fa-question-circle"></i>Soru Sor</button>
   </div>
@@ -241,6 +242,39 @@ textarea{resize:vertical;min-height:90px}
     <button class="btn" id="lb" onclick="call('/ehliyet',{state:g('l1'),durum:g('l2')},'lo','lb','Ehliyet Rehberi')">Rehber Oluştur</button>
     <div class="output-wrap"><div id="lo" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('lo')">Kopyala</button></div>
   </div></div>
+
+<div id="ssn" class="tab">
+  <div class="card">
+    <h2><i class="fas fa-id-card-alt"></i> SSN Alma Rehberi</h2>
+    <div class="hint">🆔 <strong>Yeni gelen için:</strong> F-1/J-1 öğrenciysen CPT/OPT ile alabilirsin. On-campus iş için SSN şart.</div>
+    <div class="form-row">
+      <div class="field">
+        <label>Vize Tipi</label>
+        <select id="ss1">
+          <option>F-1 Öğrenci (CPT/OPT)</option>
+          <option>J-1 Öğrenci</option>
+          <option>H-1B İş Vizesi</option>
+          <option>Green Card Bekleyen</option>
+          <option>On-campus iş</option>
+          <option>SSN yok, nasıl alırım?</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>State</label>
+        <input id="ss2" placeholder="New Jersey">
+      </div>
+    </div>
+    <div class="field">
+      <label>Durum</label>
+      <input id="ss3" placeholder="örn. CPT onayım var, OPT bekliyorum, ITIN var mı?">
+    </div>
+    <button class="btn" id="ssb" onclick="call('/ssn',{vize:g('ss1'),state:g('ss2'),durum:g('ss3')},'sso','ssb','SSN Rehberi Oluştur')">SSN Rehberi Oluştur</button>
+    <div class="output-wrap">
+      <div id="sso" class="output">Sonuç burada çıkacak...</div>
+      <button class="copy-btn" onclick="cp('sso')">Kopyala</button>
+    </div>
+  </div>
+</div>
 
   <div id="banka" class="tab"><div class="card">
     <h2><i class="fas fa-university"></i> Banka Hesabı Açma</h2>
@@ -394,6 +428,19 @@ def do_ehliyet():
         return jsonify(result=llm("ABD DMV uzmanısın, Türkçe anlat.",
             f"{d.get('state','')} ehliyet: {d.get('durum','')}. 6 Points belgeler, sınav, randevu, ücretler."))
     except Exception: return jsonify(result=traceback.format_exc())
+
+@app.route('/ssn', methods=['POST'])
+def do_ssn():
+    try:
+        d = request.json
+        return jsonify(result=llm(
+            "ABD SSN uzmanısın. Türk göçmenler için Türkçe pratik rehber ver. NJ odaklı.",
+            f"Vize: {d['vize']}. State: {d.get('state','NJ')}. Durum: {d.get('durum','')}. "
+            "SSN için gerekli belgeler, başvuru adımları, NJ SSA ofis adresleri, "
+            "F-1/J-1 için CPT/OPT şartı, ITIN alternatifi, sık hatalar."
+        ))
+    except Exception:
+        return jsonify(result=traceback.format_exc())
 
 @app.route('/banka', methods=['POST'])
 def do_banka():
