@@ -78,17 +78,18 @@ def llm(system, user):
     r = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[
-            {"role":"system","content":system + "\n\n⚠️ SADECE TÜRKÇE CEVAP VER. Hiçbir yabancı karakter kullanma."},
+            {"role":"system","content":system + "\n\n⚠️ SADECE LATİN ALFABESİ TÜRKÇE KARAKTERLER KULLAN. Çince Japonca Arapça yasak."},
             {"role":"user","content":user}
         ],
-        max_tokens=2000, 
-        temperature=0.7
+        max_tokens=2000, temperature=0.6  # Temperature düşürüldü
     )
     
-    # Çince/Japonca karakterleri temizle
+    # Tüm garip karakterleri temizle
     text = r.choices[0].message.content
-    text = ''.join(c for c in text if ord(c) < 128 or c in 'ğüşıöçĞÜŞİÖÇ')  # Sadece ASCII + Türkçe
-    text = text.replace('**', '')  # Bold temizle
+    # Sadece Latin + Türkçe tut
+    text = ''.join(c for c in text if ord(c) < 128 or c in 'ğüşıöçĞÜŞİÖÇ')
+    # Bold temizle
+    text = text.replace('**', '')
     
     return text.strip()
 
