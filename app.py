@@ -74,18 +74,19 @@ def get_context():
 # ─── AI ─────────────────────────────────────────────
 def llm(system, user):
     if not client:
-        return "GROQ_KEY eksik. Render > Environment Variables'a ekle."
-    full_system = system + "\n\nPratik kaynak bilgileri:\n" + get_context()
+        return "❌ GROQ_KEY eksik."
     r = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
-        messages=[
-            {"role": "system", "content": full_system},
-            {"role": "user", "content": user}
-        ],
-        max_tokens=2000,
-        temperature=0.7
+        messages=[{"role":"system","content":system},{"role":"user","content":user}],
+        max_tokens=2000, temperature=0.7
     )
-    return r.choices[0].message.content
+    
+    text = r.choices[0].message.content
+    
+    # Bold yapıcı (sadece bu satır)
+    text = text.replace('**', '<b>')
+    
+    return text.strip()
 
 # ─── HTML ─────────────────────────────────────────────
 HTML = """<!DOCTYPE html>
@@ -364,7 +365,7 @@ async function call(endpoint,data,outId,btnId,label){
   try{
     const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
     const j=await r.json();
-    out.textContent=j.result;
+    out.innerHTML = j.result;
   }catch(e){
     out.textContent='Hata: '+e.message;
   }finally{
