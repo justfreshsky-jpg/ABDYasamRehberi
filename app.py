@@ -164,7 +164,7 @@ textarea{resize:vertical;min-height:90px}
     <button class="active" onclick="show('vize',this)"><i class="fas fa-passport"></i>Vize</button>
     <button onclick="show('vergi',this)"><i class="fas fa-calculator"></i>Vergi</button>
     <button onclick="show('rideshare',this)"><i class="fas fa-car"></i>İş (Rideshare)</button>
-    <button onclick="show('ev',this)"><i class="fas fa-home"></i>Ev Bluma</button>
+    <button onclick="show('ev',this)"><i class="fas fa-home"></i>Ev Bulma</button>
     <button onclick="show('saglik',this)"><i class="fas fa-heartbeat"></i>Sağlık</button>
     <button onclick="show('ehliyet',this)"><i class="fas fa-id-card"></i>Ehliyet</button>
     <button onclick="show('ssn',this)"><i class="fas fa-id-card-alt"></i>SSN</button>
