@@ -306,7 +306,7 @@ textarea{resize:vertical;min-height:90px}
 
 </div>
 <div class="footer">
-  <strong>🇺🇸 ABD Yaşam Rehberi</strong> | Ücretsiz | NJ Odaklı<br>
+  <strong>🇺🇸 ABD Yaşam Rehberi</strong> | NJ Odaklı<br>
   Hiçbir kişisel veri saklanmaz<br>
   <span style="font-size:.8em;color:#94a3b8">
     ⚠️ Bu araç yalnızca bilgilendirme amaçlıdır. Yapay zeka hata yapabilir.
