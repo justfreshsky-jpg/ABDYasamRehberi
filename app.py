@@ -82,7 +82,7 @@ def llm(system, user):
     • Her adıma emoji koy: ✅ 🚀 💰 📱 🏠 🪪 ✈️ 🏥 💳 
     • ÖNEMLİ kelimeleri YÜKSEK HARF
     • Kısa paragraf, uzun liste
-    ⚠️ SADECE ABD / NJ / NY, başka ülkeye değinme!
+    ⚠️ SADECE ABD / NJ / NY!
     """
     
     full_system = system + "\n\n" + usa_prompt + "\n\nBlog verisi:\n" + get_context()
@@ -94,8 +94,13 @@ def llm(system, user):
     )
     
     text = r.choices[0].message.content
-    text = text.replace('**', '')
-    text = ''.join(c for c in text if ord(c) < 128 or c in 'ğüşıöçĞÜŞİÖÇ')
+    text = text.replace('**', '')  # Bold sil
+    
+    # SADECE Çince sil, emoji + Türkçe koru
+    text = ''.join(c for c in text 
+                   if (ord(c) < 128 or c in 'ğüşıöçĞÜŞİÖÇ' or 
+                       0x1F600 <= ord(c) <= 0x1F64F or  # Emoji range
+                       0x1F300 <= ord(c) <= 0x1F5FF))  # Diğer emoji
     
     return text.strip()
 
