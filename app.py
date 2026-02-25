@@ -1,5 +1,4 @@
 import os
-import traceback
 import requests
 import threading
 import time
@@ -103,6 +102,38 @@ def llm(system, user):
                        0x1F300 <= ord(c) <= 0x1F5FF))  # Diğer emoji
     
     return text.strip()
+
+
+class BadRequestError(Exception):
+    """İstek gövdesi beklenen formatta olmadığında fırlatılır."""
+
+
+def require_json(required_fields=None):
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        raise BadRequestError("JSON body gerekli.")
+
+    required_fields = required_fields or []
+    missing = [field for field in required_fields if not data.get(field)]
+    if missing:
+        raise BadRequestError(f"Eksik alan(lar): {', '.join(missing)}")
+
+    return data
+
+
+def llm_json(system_prompt, user_prompt):
+    return jsonify(result=llm(system_prompt, user_prompt))
+
+
+@app.errorhandler(BadRequestError)
+def handle_bad_request(error):
+    return jsonify(error=str(error)), 400
+
+
+@app.errorhandler(Exception)
+def handle_unexpected_error(_error):
+    return jsonify(error="İşlem sırasında bir hata oluştu."), 500
+
 
 # ─── HTML ─────────────────────────────────────────────
 HTML = """<!DOCTYPE html>
@@ -400,112 +431,109 @@ def index():
 
 @app.route('/vize', methods=['POST'])
 def do_vize():
-    try:
-        d = request.json
-        return jsonify(result=llm("ABD göçmenlik uzmanısın, Türkçe pratik rehber ver.",
-            f"{d['tip']} vizesi. State: {d.get('state','')}. Durum: {d.get('durum','')}. Belgeler, formlar, ücretler, hatalar, linkler."))
-    except Exception: return jsonify(result=traceback.format_exc())
+    d = require_json(["tip"])
+    return llm_json(
+        "ABD göçmenlik uzmanısın, Türkçe pratik rehber ver.",
+        f"{d['tip']} vizesi. State: {d.get('state','')}. Durum: {d.get('durum','')}. Belgeler, formlar, ücretler, hatalar, linkler."
+    )
 
 @app.route('/vergi', methods=['POST'])
 def do_vergi():
-    try:
-        d = request.json
-        return jsonify(result=llm("ABD vergi uzmanısın, Türkçe sade anlat.",
-            f"Form: {d['form']}. Kazanç: ${d.get('kazanc',0)}. Vize: {d.get('vize','')}. State: {d.get('state','')}. Doldurma rehberi, iade tahmini, deadline'lar."))
-    except Exception: return jsonify(result=traceback.format_exc())
+    d = require_json(["form"])
+    return llm_json(
+        "ABD vergi uzmanısın, Türkçe sade anlat.",
+        f"Form: {d['form']}. Kazanç: ${d.get('kazanc',0)}. Vize: {d.get('vize','')}. State: {d.get('state','')}. Doldurma rehberi, iade tahmini, deadline'lar."
+    )
 
 @app.route('/rideshare', methods=['POST'])
 def do_rideshare():
-    try:
-        d = request.json
-        return jsonify(result=llm("Rideshare ve gig economy uzmanısın, Türkçe yaz.",
-            f"{d['app']} - {d.get('state','')}. Konu: {d.get('konu','')}. Belgeler, kazanç, vergi, ipuçları."))
-    except Exception: return jsonify(result=traceback.format_exc())
+    d = require_json(["app"])
+    return llm_json(
+        "Rideshare ve gig economy uzmanısın, Türkçe yaz.",
+        f"{d['app']} - {d.get('state','')}. Konu: {d.get('konu','')}. Belgeler, kazanç, vergi, ipuçları."
+    )
 
 @app.route('/ev', methods=['POST'])
 def do_ev():
-    try:
-        d = request.json
-        return jsonify(result=llm("ABD emlak uzmanısın, Türkçe yaz.",
-            f"{d.get('sehir','')} ${d.get('butce','')} bütçe. Durum: {d.get('durum','')}. Siteler, belgeler, müzakere tüyoları."))
-    except Exception: return jsonify(result=traceback.format_exc())
+    d = require_json()
+    return llm_json(
+        "ABD emlak uzmanısın, Türkçe yaz.",
+        f"{d.get('sehir','')} ${d.get('butce','')} bütçe. Durum: {d.get('durum','')}. Siteler, belgeler, müzakere tüyoları."
+    )
 
 @app.route('/saglik', methods=['POST'])
 def do_saglik():
-    try:
-        d = request.json
-        return jsonify(result=llm("ABD sağlık sistemi uzmanısın, Türkçe pratik yaz.",
-            f"{d.get('state','')} - {d.get('durum','')}. Adresler, belgeler, Medicaid, ücretsiz klinikler."))
-    except Exception: return jsonify(result=traceback.format_exc())
+    d = require_json()
+    return llm_json(
+        "ABD sağlık sistemi uzmanısın, Türkçe pratik yaz.",
+        f"{d.get('state','')} - {d.get('durum','')}. Adresler, belgeler, Medicaid, ücretsiz klinikler."
+    )
 
 @app.route('/ehliyet', methods=['POST'])
 def do_ehliyet():
-    try:
-        d = request.json
-        return jsonify(result=llm("ABD DMV uzmanısın, Türkçe anlat.",
-            f"{d.get('state','')} ehliyet: {d.get('durum','')}. 6 Points belgeler, sınav, randevu, ücretler."))
-    except Exception: return jsonify(result=traceback.format_exc())
+    d = require_json()
+    return llm_json(
+        "ABD DMV uzmanısın, Türkçe anlat.",
+        f"{d.get('state','')} ehliyet: {d.get('durum','')}. 6 Points belgeler, sınav, randevu, ücretler."
+    )
 
 @app.route('/ssn', methods=['POST'])
 def do_ssn():
-    try:
-        d = request.json
-        return jsonify(result=llm(
-            "ABD SSN uzmanısın. Türk göçmenler için Türkçe pratik rehber ver. NJ odaklı.",
-            f"Vize: {d['vize']}. State: {d.get('state','NJ')}. Durum: {d.get('durum','')}. "
-            "SSN için gerekli belgeler, başvuru adımları, NJ SSA ofis adresleri, "
-            "F-1/J-1 için CPT/OPT şartı, ITIN alternatifi, sık hatalar."
-        ))
-    except Exception:
-        return jsonify(result=traceback.format_exc())
+    d = require_json(["vize"])
+    return llm_json(
+        "ABD SSN uzmanısın. Türk göçmenler için Türkçe pratik rehber ver. NJ odaklı.",
+        f"Vize: {d['vize']}. State: {d.get('state','NJ')}. Durum: {d.get('durum','')}. "
+        "SSN için gerekli belgeler, başvuru adımları, NJ SSA ofis adresleri, "
+        "F-1/J-1 için CPT/OPT şartı, ITIN alternatifi, sık hatalar."
+    )
 
 @app.route('/banka', methods=['POST'])
 def do_banka():
-    try:
-        d = request.json
-        return jsonify(result=llm("ABD bankacılık uzmanısın, Türkçe yaz.",
-            f"Konu: {d.get('durum','')}. Hangi banka, belgeler, credit score, secured card."))
-    except Exception: return jsonify(result=traceback.format_exc())
+    d = require_json()
+    return llm_json(
+        "ABD bankacılık uzmanısın, Türkçe yaz.",
+        f"Konu: {d.get('durum','')}. Hangi banka, belgeler, credit score, secured card."
+    )
 
 @app.route('/telefon', methods=['POST'])
 def do_telefon():
-    try:
-        d = request.json
-        return jsonify(result=llm("ABD telekomünikasyon uzmanısın, Türkçe rehber.",
-            f"Konu: {d.get('konu','')}. Adım adım kurulum, fiyatlar, alternatifler."))
-    except Exception: return jsonify(result=traceback.format_exc())
+    d = require_json()
+    return llm_json(
+        "ABD telekomünikasyon uzmanısın, Türkçe rehber.",
+        f"Konu: {d.get('konu','')}. Adım adım kurulum, fiyatlar, alternatifler."
+    )
 
 @app.route('/arac', methods=['POST'])
 def do_arac():
-    try:
-        d = request.json
-        return jsonify(result=llm("ABD otomotiv uzmanısın, Türkçe yaz.",
-            f"{d.get('state','')} - {d.get('konu','')}. Belgeler, sigorta, fiyat, CarMax/Carvana."))
-    except Exception: return jsonify(result=traceback.format_exc())
+    d = require_json()
+    return llm_json(
+        "ABD otomotiv uzmanısın, Türkçe yaz.",
+        f"{d.get('state','')} - {d.get('konu','')}. Belgeler, sigorta, fiyat, CarMax/Carvana."
+    )
 
 @app.route('/wise', methods=['POST'])
 def do_wise():
-    try:
-        d = request.json
-        return jsonify(result=llm("Para transferi uzmanısın, Türkçe anlat.",
-            f"Konu: {d.get('konu','')}. Adımlar, komisyonlar, limitler, alternatifler."))
-    except Exception: return jsonify(result=traceback.format_exc())
+    d = require_json()
+    return llm_json(
+        "Para transferi uzmanısın, Türkçe anlat.",
+        f"Konu: {d.get('konu','')}. Adımlar, komisyonlar, limitler, alternatifler."
+    )
 
 @app.route('/ucak', methods=['POST'])
 def do_ucak():
-    try:
-        d = request.json
-        return jsonify(result=llm("Havacılık uzmanısın, Türkçe pratik rehber.",
-            f"{d.get('havayolu','')} - {d.get('konu','')}. Detaylı bilgi, ücretler, ipuçları."))
-    except Exception: return jsonify(result=traceback.format_exc())
+    d = require_json()
+    return llm_json(
+        "Havacılık uzmanısın, Türkçe pratik rehber.",
+        f"{d.get('havayolu','')} - {d.get('konu','')}. Detaylı bilgi, ücretler, ipuçları."
+    )
 
 @app.route('/sorgu', methods=['POST'])
 def do_sorgu():
-    try:
-        d = request.json
-        return jsonify(result=llm("ABD'deki Türkler için pratik rehber uzmanısın. Türkçe, net, adım adım cevapla.",
-            d.get('soru', '')))
-    except Exception: return jsonify(result=traceback.format_exc())
+    d = require_json()
+    return llm_json(
+        "ABD'deki Türkler için pratik rehber uzmanısın. Türkçe, net, adım adım cevapla.",
+        d.get('soru', '')
+    )
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
