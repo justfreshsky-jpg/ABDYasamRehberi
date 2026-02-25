@@ -4,12 +4,60 @@ import threading
 import time
 from bs4 import BeautifulSoup
 from flask import Flask, request, jsonify, render_template_string
-from groq import Groq
 os.environ['HTTPX_PROXIES'] = 'null'
 
 app = Flask(__name__)
-GROQ_KEY = os.environ.get('GROQ_KEY')
-client = Groq(api_key=GROQ_KEY) if GROQ_KEY else None
+GOOGLE_CLOUD_PROJECT = os.environ.get('GOOGLE_CLOUD_PROJECT') or os.environ.get('GCP_PROJECT')
+VERTEX_LOCATION = os.environ.get('VERTEX_LOCATION', 'us-central1')
+GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-1.5-flash')
+
+
+def get_access_token():
+    env_token = os.environ.get('GOOGLE_OAUTH_ACCESS_TOKEN')
+    if env_token:
+        return env_token
+
+    metadata_url = 'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token'
+    try:
+        r = requests.get(metadata_url, headers={'Metadata-Flavor': 'Google'}, timeout=2)
+        return r.json().get('access_token', '') if r.ok else ''
+    except Exception:
+        return ''
+
+
+def call_vertex(prompt):
+    token = get_access_token()
+    if not token or not GOOGLE_CLOUD_PROJECT:
+        return ''
+
+    endpoint = (
+        f"https://{VERTEX_LOCATION}-aiplatform.googleapis.com/v1/"
+        f"projects/{GOOGLE_CLOUD_PROJECT}/locations/{VERTEX_LOCATION}/"
+        f"publishers/google/models/{GEMINI_MODEL}:generateContent"
+    )
+    payload = {
+        'contents': [
+            {
+                'role': 'user',
+                'parts': [{'text': prompt}]
+            }
+        ],
+        'generationConfig': {'maxOutputTokens': 2000, 'temperature': 0.6}
+    }
+    headers = {
+        'Authorization': f'Bearer {token}',
+        'Content-Type': 'application/json'
+    }
+
+    r = requests.post(endpoint, headers=headers, json=payload, timeout=30)
+    if not r.ok:
+        return ''
+
+    data = r.json()
+    try:
+        return data['candidates'][0]['content']['parts'][0]['text']
+    except Exception:
+        return ''
 
 # ─── ARKA PLANDA BLOG İÇERİĞİ ─────────────────────────────
 _cache = {"content": "", "last": 0}
@@ -71,36 +119,47 @@ def get_context():
     return _cache["content"]
 
 # ─── AI ─────────────────────────────────────────────
+def local_fallback_reply(user):
+    sample = "\n".join(
+        line for line in get_context().splitlines()
+        if line.strip() and line.strip() != "---"
+    )
+    sample = "\n".join(sample.splitlines()[:8])
+    return (
+        "⚠️ Vertex AI yapılandırması eksik, bu yüzden AI yanıtı yerine hızlı rehber özeti gösteriyorum.\n\n"
+        f"📌 Sorun: {user or 'Genel soru'}\n"
+        "✅ Cloud Run ortam değişkenlerine GOOGLE_CLOUD_PROJECT ve VERTEX_LOCATION ekleyince tam AI cevapları geri gelir.\n"
+        "✅ Servis hesabına Vertex AI User (roles/aiplatform.user) yetkisi ver.\n"
+        "\nHızlı Bilgiler:\n"
+        f"{sample}"
+    )
+
+
 def llm(system, user):
-    if not client:
-        return "❌ GROQ_KEY eksik."
-    
+    if not GOOGLE_CLOUD_PROJECT:
+        return local_fallback_reply(user)
+
     usa_prompt = """
     🇺🇸 SADECE ABD İLE İLGİLİ CEVAP VER
     ✅ ABD VİZE / SSN / BANK / EV / UBER / VERGİ / SAĞLIK
-    • Her adıma emoji koy: ✅ 🚀 💰 📱 🏠 🪪 ✈️ 🏥 💳 
+    • Her adıma emoji koy: ✅ 🚀 💰 📱 🏠 🪪 ✈️ 🏥 💳
     • ÖNEMLİ kelimeleri YÜKSEK HARF
     • Kısa paragraf, uzun liste
     ⚠️ SADECE ABD / NJ / NY!
     """
-    
+
     full_system = system + "\n\n" + usa_prompt + "\n\nBlog verisi:\n" + get_context()
-    
-    r = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[{"role":"system","content":full_system},{"role":"user","content":user}],
-        max_tokens=2000, temperature=0.6
-    )
-    
-    text = r.choices[0].message.content
-    text = text.replace('**', '')  # Bold sil
-    
-    # SADECE Çince sil, emoji + Türkçe koru
-    text = ''.join(c for c in text 
-                   if (ord(c) < 128 or c in 'ğüşıöçĞÜŞİÖÇ' or 
-                       0x1F600 <= ord(c) <= 0x1F64F or  # Emoji range
-                       0x1F300 <= ord(c) <= 0x1F5FF))  # Diğer emoji
-    
+
+    text = call_vertex(f"{full_system}\n\nKullanıcı sorusu:\n{user}")
+    if not text:
+        return local_fallback_reply(user)
+    text = text.replace('**', '')
+
+    text = ''.join(c for c in text
+                   if (ord(c) < 128 or c in 'ğüşıöçĞÜŞİÖÇ' or
+                       0x1F600 <= ord(c) <= 0x1F64F or
+                       0x1F300 <= ord(c) <= 0x1F5FF))
+
     return text.strip()
 
 
@@ -428,6 +487,18 @@ async function call(endpoint,data,outId,btnId,label){
 @app.route('/')
 def index():
     return render_template_string(HTML)
+
+
+@app.route('/healthz')
+def healthz():
+    return jsonify(
+        status='ok',
+        ai_provider='vertex_ai_gemini',
+        vertex_configured=bool(GOOGLE_CLOUD_PROJECT and get_access_token()),
+        project=GOOGLE_CLOUD_PROJECT,
+        location=VERTEX_LOCATION,
+        model=GEMINI_MODEL
+    )
 
 @app.route('/vize', methods=['POST'])
 def do_vize():
