@@ -139,16 +139,16 @@ def llm(system, user):
     if not GOOGLE_CLOUD_PROJECT:
         return local_fallback_reply(user)
 
-    usa_prompt = """
-    🇺🇸 SADECE ABD İLE İLGİLİ CEVAP VER
-    ✅ ABD VİZE / SSN / BANK / EV / UBER / VERGİ / SAĞLIK
-    • Her adıma emoji koy: ✅ 🚀 💰 📱 🏠 🪪 ✈️ 🏥 💳
-    • ÖNEMLİ kelimeleri YÜKSEK HARF
-    • Kısa paragraf, uzun liste
-    ⚠️ SADECE ABD / NJ / NY!
+    educator_prompt = """
+    🎓 EĞİTMEN ODAKLI CEVAP VER
+    ✅ DERS PLANI / ETKİNLİK / ÖLÇME-DEĞERLENDİRME / FARKLILAŞTIRMA
+    • Yanıtı net başlıklarla ver: AMAÇ, SÜREÇ, MATERYAL, DEĞERLENDİRME
+    • Uygulanabilir ve sınıf içinde gerçekçi olsun
+    • Kısa açıklama + madde madde adımlar
+    • Kapsayıcı, yaş düzeyine uygun, güvenli dil kullan
     """
 
-    full_system = system + "\n\n" + usa_prompt + "\n\nBlog verisi:\n" + get_context()
+    full_system = system + "\n\n" + educator_prompt + "\n\nReferans veri:\n" + get_context()
 
     text = call_vertex(f"{full_system}\n\nKullanıcı sorusu:\n{user}")
     if not text:
@@ -198,7 +198,7 @@ def handle_unexpected_error(_error):
 HTML = """<!DOCTYPE html>
 <html lang="tr">
 <head>
-<title>ABD Yaşam Rehberi</title>
+<title>Eğitmen AI Asistanı</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
@@ -245,22 +245,37 @@ textarea{resize:vertical;min-height:90px}
 .output-wrap:hover .copy-btn{opacity:1}
 .spinner{display:inline-block;width:16px;height:16px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
+.edu-focus{background:#ffffff;border:2px dashed #bfdbfe;border-radius:16px;padding:20px;margin:18px 0 6px;box-shadow:0 4px 18px rgba(30,64,175,.08)}
+.edu-focus h2{color:#1e3a8a;font-size:1.3em;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.edu-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:640px){.edu-grid{grid-template-columns:1fr}}
 .footer{text-align:center;padding:32px 20px;color:#64748b;font-size:.88em;line-height:2;background:#fff;margin-top:20px;border-radius:16px}
 </style>
 </head>
 <body>
 <div class="hero">
-  <h1>🇺🇸 ABD'ye Hoş Geldin!</h1>
-  <p>Türkler için pratik AI rehberi — sıfırdan adım adım</p>
+  <h1>🎓 Eğitmen AI Asistanı</h1>
+  <p>Öğretmenler ve eğitmenler için daha iyi ders akışı, etkinlik ve değerlendirme önerileri</p>
   <div class="steps">
-    <span class="step">1️⃣ Vize Al</span>
-    <span class="step">2️⃣ SSN Çıkar</span>
-    <span class="step">3️⃣ Banka Aç</span>
-    <span class="step">4️⃣ Ev Bul</span>
-    <span class="step">5️⃣ Çalış / Para Kazan</span>
+    <span class="step">1️⃣ Konuyu Gir</span>
+    <span class="step">2️⃣ Sınıf Düzeyini Seç</span>
+    <span class="step">3️⃣ Hedefi Belirt</span>
+    <span class="step">4️⃣ Planı Üret</span>
   </div>
 </div>
 <div class="container">
+  <div class="edu-focus">
+    <h2><i class="fas fa-chalkboard-teacher"></i> Hızlı Ders Tasarımcısı</h2>
+    <div class="hint">🧩 <strong>İpucu:</strong> Herhangi bir konu için hedef, materyal ve ölçme adımlarını tek tıkla üret.</div>
+    <div class="edu-grid">
+      <div class="field"><label>Ders / Konu</label><input id="ed1" placeholder="örn. Kesirler, İklim Krizi, Hikâye Yazımı"></div>
+      <div class="field"><label>Sınıf / Seviye</label><input id="ed2" placeholder="örn. 5. sınıf, B1, Üniversite hazırlık"></div>
+      <div class="field"><label>Öğrenme Hedefi</label><input id="ed3" placeholder="örn. Öğrenci kesirleri karşılaştırabilsin"></div>
+      <div class="field"><label>Kısıtlar</label><input id="ed4" placeholder="örn. 40 dk, projeksiyon yok, kalabalık sınıf"></div>
+    </div>
+    <button class="btn" id="edb" onclick="askEducator()">Eğitmen Planı Oluştur</button>
+    <div class="output-wrap"><div id="edo" class="output">Öğretim planı burada çıkacak...</div><button class="copy-btn" onclick="cp('edo')">Kopyala</button></div>
+  </div>
   <div class="tabs">
     <button class="active" onclick="show('vize',this)"><i class="fas fa-passport"></i>Vize</button>
     <button onclick="show('vergi',this)"><i class="fas fa-calculator"></i>Vergi</button>
@@ -439,7 +454,7 @@ textarea{resize:vertical;min-height:90px}
 
 </div>
 <div class="footer">
-  <strong>🇺🇸 ABD Yaşam Rehberi</strong><br>
+  <strong>🎓 Eğitmen AI Asistanı</strong><br>
   Hiçbir kişisel veri saklanmaz<br>
   <span style="font-size:.8em;color:#94a3b8">
     ⚠️ Bu araç yalnızca bilgilendirme amaçlıdır. Yapay zeka hata yapabilir.
@@ -449,6 +464,10 @@ textarea{resize:vertical;min-height:90px}
 </div>
 <script>
 function g(id){return document.getElementById(id).value;}
+function askEducator(){
+  const prompt=`Konu: ${g('ed1')}\nSeviye: ${g('ed2')}\nÖğrenme hedefi: ${g('ed3')}\nKısıtlar: ${g('ed4')}\n\nBuna göre 1 derslik uygulanabilir plan, etkinlik, sınıf yönetimi tüyosu ve ölçme-değerlendirme rubriği ver.`;
+  call('/sorgu',{soru:prompt},'edo','edb','Eğitmen Planı Oluştur');
+}
 function show(tab,btn){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
@@ -602,7 +621,7 @@ def do_ucak():
 def do_sorgu():
     d = require_json()
     return llm_json(
-        "ABD'deki Türkler için pratik rehber uzmanısın. Türkçe, net, adım adım cevapla.",
+        "Deneyimli bir eğitim tasarımcısısın. Her konuda eğitmenlere Türkçe, uygulanabilir ve sınıf gerçekliğine uygun planlar üret.",
         d.get('soru', '')
     )
 
