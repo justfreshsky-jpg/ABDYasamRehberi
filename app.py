@@ -198,7 +198,7 @@ def handle_unexpected_error(_error):
 HTML = """<!DOCTYPE html>
 <html lang="tr">
 <head>
-<title>ABD Yaşam Rehberi</title>
+<title>Eğitmen AI Asistanı</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
@@ -245,6 +245,10 @@ textarea{resize:vertical;min-height:90px}
 .output-wrap:hover .copy-btn{opacity:1}
 .spinner{display:inline-block;width:16px;height:16px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
+.edu-focus{background:#ffffff;border:2px dashed #bfdbfe;border-radius:16px;padding:20px;margin:18px 0 6px;box-shadow:0 4px 18px rgba(30,64,175,.08)}
+.edu-focus h2{color:#1e3a8a;font-size:1.3em;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.edu-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:640px){.edu-grid{grid-template-columns:1fr}}
 .footer{text-align:center;padding:32px 20px;color:#64748b;font-size:.88em;line-height:2;background:#fff;margin-top:20px;border-radius:16px}
 </style>
 </head>
@@ -442,7 +446,7 @@ textarea{resize:vertical;min-height:90px}
 
 </div>
 <div class="footer">
-  <strong>🇺🇸 ABD Yaşam Rehberi</strong><br>
+  <strong>🎓 Eğitmen AI Asistanı</strong><br>
   Hiçbir kişisel veri saklanmaz<br>
   <span style="font-size:.8em;color:#94a3b8">
     ⚠️ Bu araç yalnızca bilgilendirme amaçlıdır. Yapay zeka hata yapabilir.
@@ -452,6 +456,10 @@ textarea{resize:vertical;min-height:90px}
 </div>
 <script>
 function g(id){return document.getElementById(id).value;}
+function askEducator(){
+  const prompt=`Konu: ${g('ed1')}\nSeviye: ${g('ed2')}\nÖğrenme hedefi: ${g('ed3')}\nKısıtlar: ${g('ed4')}\n\nBuna göre 1 derslik uygulanabilir plan, etkinlik, sınıf yönetimi tüyosu ve ölçme-değerlendirme rubriği ver.`;
+  call('/sorgu',{soru:prompt},'edo','edb','Eğitmen Planı Oluştur');
+}
 function show(tab,btn){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
