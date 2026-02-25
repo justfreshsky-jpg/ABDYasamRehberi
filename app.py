@@ -139,16 +139,16 @@ def llm(system, user):
     if not GOOGLE_CLOUD_PROJECT:
         return local_fallback_reply(user)
 
-    educator_prompt = """
-    🎓 EĞİTMEN ODAKLI CEVAP VER
-    ✅ DERS PLANI / ETKİNLİK / ÖLÇME-DEĞERLENDİRME / FARKLILAŞTIRMA
-    • Yanıtı net başlıklarla ver: AMAÇ, SÜREÇ, MATERYAL, DEĞERLENDİRME
-    • Uygulanabilir ve sınıf içinde gerçekçi olsun
-    • Kısa açıklama + madde madde adımlar
-    • Kapsayıcı, yaş düzeyine uygun, güvenli dil kullan
+    usa_prompt = """
+    🇺🇸 SADECE ABD İLE İLGİLİ CEVAP VER
+    ✅ ABD VİZE / SSN / BANK / EV / UBER / VERGİ / SAĞLIK
+    • Her adıma emoji koy: ✅ 🚀 💰 📱 🏠 🪪 ✈️ 🏥 💳
+    • ÖNEMLİ kelimeleri YÜKSEK HARF
+    • Kısa paragraf, uzun liste
+    ⚠️ SADECE ABD / NJ / NY!
     """
 
-    full_system = system + "\n\n" + educator_prompt + "\n\nReferans veri:\n" + get_context()
+    full_system = system + "\n\n" + usa_prompt + "\n\nReferans veri:\n" + get_context()
 
     text = call_vertex(f"{full_system}\n\nKullanıcı sorusu:\n{user}")
     if not text:
@@ -254,27 +254,19 @@ textarea{resize:vertical;min-height:90px}
 </head>
 <body>
 <div class="hero">
-  <h1>🎓 Eğitmen AI Asistanı</h1>
-  <p>Öğretmenler ve eğitmenler için daha iyi ders akışı, etkinlik ve değerlendirme önerileri</p>
+  <h1>🇺🇸 ABD Yaşam Rehberi</h1>
+  <p>Türkler için pratik AI rehberi — adım adım, sade ve uygulanabilir.</p>
   <div class="steps">
-    <span class="step">1️⃣ Konuyu Gir</span>
-    <span class="step">2️⃣ Sınıf Düzeyini Seç</span>
-    <span class="step">3️⃣ Hedefi Belirt</span>
-    <span class="step">4️⃣ Planı Üret</span>
+    <span class="step">1️⃣ Vize</span>
+    <span class="step">2️⃣ SSN</span>
+    <span class="step">3️⃣ Banka</span>
+    <span class="step">4️⃣ Ev</span>
+    <span class="step">5️⃣ İş</span>
   </div>
 </div>
 <div class="container">
-  <div class="edu-focus">
-    <h2><i class="fas fa-chalkboard-teacher"></i> Hızlı Ders Tasarımcısı</h2>
-    <div class="hint">🧩 <strong>İpucu:</strong> Herhangi bir konu için hedef, materyal ve ölçme adımlarını tek tıkla üret.</div>
-    <div class="edu-grid">
-      <div class="field"><label>Ders / Konu</label><input id="ed1" placeholder="örn. Kesirler, İklim Krizi, Hikâye Yazımı"></div>
-      <div class="field"><label>Sınıf / Seviye</label><input id="ed2" placeholder="örn. 5. sınıf, B1, Üniversite hazırlık"></div>
-      <div class="field"><label>Öğrenme Hedefi</label><input id="ed3" placeholder="örn. Öğrenci kesirleri karşılaştırabilsin"></div>
-      <div class="field"><label>Kısıtlar</label><input id="ed4" placeholder="örn. 40 dk, projeksiyon yok, kalabalık sınıf"></div>
-    </div>
-    <button class="btn" id="edb" onclick="askEducator()">Eğitmen Planı Oluştur</button>
-    <div class="output-wrap"><div id="edo" class="output">Öğretim planı burada çıkacak...</div><button class="copy-btn" onclick="cp('edo')">Kopyala</button></div>
+  <div class="hint" style="margin-top:8px">
+    🍎 <strong>Kullanım ipucu:</strong> Çıktıları kısa özetleyip adım adım uygulayarak daha hızlı sonuç alabilirsiniz.
   </div>
   <div class="tabs">
     <button class="active" onclick="show('vize',this)"><i class="fas fa-passport"></i>Vize</button>
@@ -621,7 +613,7 @@ def do_ucak():
 def do_sorgu():
     d = require_json()
     return llm_json(
-        "Deneyimli bir eğitim tasarımcısısın. Her konuda eğitmenlere Türkçe, uygulanabilir ve sınıf gerçekliğine uygun planlar üret.",
+        "ABD’de yaşayan Türkler için pratik rehber uzmanısın. Cevapları sade, adım adım ve güvenli şekilde ver.",
         d.get('soru', '')
     )
 
