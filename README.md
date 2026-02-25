@@ -33,6 +33,15 @@ export PORT=5000
 gunicorn -b 0.0.0.0:${PORT} app:app
 ```
 
+
+## Docker (Cloud Run uyumlu)
+```bash
+docker build -t amerika-rehber .
+docker run --rm -p 8080:8080 -e GROQ_KEY="your_key_here" amerika-rehber
+```
+
+Cloud Run için Dockerfile kök dizine eklendi ve `PORT` env değişkeni üzerinden `gunicorn` ile başlatılır.
+
 ## Notlar
 - `GROQ_KEY` yoksa API yanıtı olarak "GROQ_KEY eksik" mesajı döner.
 - Harici blog kaynağı çekilemezse uygulama fallback metin ile devam eder.
