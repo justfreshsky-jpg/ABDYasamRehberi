@@ -204,7 +204,7 @@ def handle_unexpected_error(_error):
 HTML = """<!DOCTYPE html>
 <html lang="tr">
 <head>
-<title>ABD Yaşam Rehberi</title>
+<title>Eğitmen AI Asistanı</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
@@ -462,7 +462,7 @@ textarea{resize:vertical;min-height:90px}
 
 </div>
 <div class="footer">
-  <strong>🇺🇸 ABD Yaşam Rehberi</strong><br>
+  <strong>🎓 Eğitmen AI Asistanı</strong><br>
   Hiçbir kişisel veri saklanmaz<br>
   <span style="font-size:.8em;color:#94a3b8">
     ⚠️ Bu araç yalnızca bilgilendirme amaçlıdır. Yapay zeka hata yapabilir.
