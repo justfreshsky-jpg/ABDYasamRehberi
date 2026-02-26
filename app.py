@@ -145,6 +145,12 @@ def llm(system, user):
     • Her adıma emoji koy: ✅ 🚀 💰 📱 🏠 🪪 ✈️ 🏥 💳
     • ÖNEMLİ kelimeleri YÜKSEK HARF
     • Kısa paragraf, uzun liste
+    • ÇIKTI ŞABLONU KULLAN:
+      1) Hızlı Özet (3 madde)
+      2) Adım Adım Kontrol Listesi
+      3) Sık Hata / Riskler
+      4) Resmi Linkler (varsa)
+      5) Sonraki Adım (tek net öneri)
     ⚠️ SADECE ABD / NJ / NY!
     """
 
@@ -245,28 +251,38 @@ textarea{resize:vertical;min-height:90px}
 .output-wrap:hover .copy-btn{opacity:1}
 .spinner{display:inline-block;width:16px;height:16px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
-.edu-focus{background:#ffffff;border:2px dashed #bfdbfe;border-radius:16px;padding:20px;margin:18px 0 6px;box-shadow:0 4px 18px rgba(30,64,175,.08)}
-.edu-focus h2{color:#1e3a8a;font-size:1.3em;margin-bottom:10px;display:flex;align-items:center;gap:8px}
-.edu-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-@media(max-width:640px){.edu-grid{grid-template-columns:1fr}}
-.footer{text-align:center;padding:32px 20px;color:#64748b;font-size:.88em;line-height:2;background:#fff;margin-top:20px;border-radius:16px}
+.trust-row{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0 10px}.trust-chip{background:#fff;border:1px solid #dbeafe;color:#1e3a8a;padding:8px 12px;border-radius:999px;font-size:.82em;font-weight:600}.goal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:8px 0 18px}.goal-card{background:#fff;border:2px solid #e2e8f0;border-radius:12px;padding:12px;cursor:pointer;transition:.2s}.goal-card:hover{border-color:#3b82f6;transform:translateY(-2px)}.goal-card h4{font-size:.95em;color:#1e3a8a;margin-bottom:4px}.goal-card p{font-size:.8em;color:#64748b}.hero-cta{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:14px}.hero-cta button{background:#fff;color:#1e3a8a;border:none;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer}.footer{text-align:center;padding:32px 20px;color:#64748b;font-size:.88em;line-height:2;background:#fff;margin-top:20px;border-radius:16px}
 </style>
 </head>
 <body>
 <div class="hero">
   <h1>🇺🇸 ABD Yaşam Rehberi</h1>
-  <p>Türkler için pratik AI rehberi — adım adım, sade ve uygulanabilir.</p>
+  <p>ABD'de ilk 30 gün için kişisel yol haritanı 2-3 dakikada oluştur.</p>
   <div class="steps">
-    <span class="step">1️⃣ Vize</span>
-    <span class="step">2️⃣ SSN</span>
-    <span class="step">3️⃣ Banka</span>
-    <span class="step">4️⃣ Ev</span>
-    <span class="step">5️⃣ İş</span>
+    <span class="step">1️⃣ Konu Seç</span>
+    <span class="step">2️⃣ Bilgini Gir</span>
+    <span class="step">3️⃣ Kontrol Listeni Al</span>
+  </div>
+  <div class="hero-cta">
+    <button onclick="quickStart('ssn')">SSN ile Başla</button>
+    <button onclick="quickStart('vize')">Vize Planı</button>
+    <button onclick="quickStart('sorgu')">Hızlı Soru Sor</button>
   </div>
 </div>
 <div class="container">
+  <div class="trust-row">
+    <span class="trust-chip">🔐 Kişisel veri saklanmaz</span>
+    <span class="trust-chip">🧭 Adım adım kontrol listesi</span>
+    <span class="trust-chip">🗓 Güncelleme: 2026</span>
+  </div>
   <div class="hint" style="margin-top:8px">
-    🍎 <strong>Kullanım ipucu:</strong> Çıktıları kısa özetleyip adım adım uygulayarak daha hızlı sonuç alabilirsiniz.
+    🍎 <strong>Kullanım ipucu:</strong> Önce bir hedef kartı seç, sonra kendi durumuna göre rehber üret.
+  </div>
+  <div class="goal-grid">
+    <div class="goal-card" onclick="quickStart('ssn')"><h4>SSN Başvurusu</h4><p>Belgeler + ofis adımları</p></div>
+    <div class="goal-card" onclick="quickStart('banka')"><h4>Banka Hesabı</h4><p>SSN yoksa seçenekler</p></div>
+    <div class="goal-card" onclick="quickStart('ev')"><h4>Ev Kiralama</h4><p>Bütçe + sözleşme kontrolü</p></div>
+    <div class="goal-card" onclick="quickStart('vergi')"><h4>Vergi Rehberi</h4><p>Form + son tarih özeti</p></div>
   </div>
   <div class="tabs">
     <button class="active" onclick="show('vize',this)"><i class="fas fa-passport"></i>Vize</button>
@@ -456,9 +472,15 @@ textarea{resize:vertical;min-height:90px}
 </div>
 <script>
 function g(id){return document.getElementById(id).value;}
-function askEducator(){
-  const prompt=`Konu: ${g('ed1')}\nSeviye: ${g('ed2')}\nÖğrenme hedefi: ${g('ed3')}\nKısıtlar: ${g('ed4')}\n\nBuna göre 1 derslik uygulanabilir plan, etkinlik, sınıf yönetimi tüyosu ve ölçme-değerlendirme rubriği ver.`;
-  call('/sorgu',{soru:prompt},'edo','edb','Eğitmen Planı Oluştur');
+function quickStart(tab){
+  const target=document.getElementById(tab);
+  if(!target) return;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
+  target.classList.add('active');
+  const match=[...document.querySelectorAll('.tabs button')].find(b=>b.getAttribute('onclick')?.includes(`'${tab}'`));
+  if(match) match.classList.add('active');
+  target.scrollIntoView({behavior:'smooth',block:'start'});
 }
 function show(tab,btn){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
@@ -477,14 +499,18 @@ async function call(endpoint,data,outId,btnId,label){
   const out=document.getElementById(outId);
   const btn=document.getElementById(btnId);
   btn.disabled=true;
-  btn.innerHTML='<span class="spinner"></span>Üretiliyor...';
-  out.textContent='AI düşünüyor...';
+  btn.innerHTML='<span class=\"spinner\"></span>Adım 1/3: Bilgi hazırlanıyor';
+  out.textContent='Adım 2/3: Vertex AI ile yanıt hazırlanıyor...';
   try{
     const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
     const j=await r.json();
-    out.textContent=j.result;
+    if(!r.ok){
+      out.textContent='Hata: '+(j.error || 'İstek işlenemedi.');
+      return;
+    }
+    out.textContent='Adım 3/3: Sonuç hazır ✅\n\n'+(j.result || 'Sonuç üretilemedi.');
   }catch(e){
-    out.textContent='Hata: '+e.message;
+    out.textContent='Bağlantı hatası: '+e.message;
   }finally{
     btn.disabled=false;
     btn.textContent=label;
