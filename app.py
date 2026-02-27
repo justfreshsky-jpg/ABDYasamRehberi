@@ -489,7 +489,6 @@ textarea{resize:vertical;min-height:90px}
 
 </div>
 <div class="footer">
-  <strong>🎓 Eğitmen AI Asistanı</strong><br>
   Hiçbir kişisel veri saklanmaz<br>
   <span style="font-size:.8em;color:#94a3b8">
     ⚠️ Bu araç yalnızca bilgilendirme amaçlıdır. Yapay zeka hata yapabilir.
