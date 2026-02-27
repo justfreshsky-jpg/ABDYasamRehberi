@@ -1,3 +1,5 @@
+import logging
+from logging.handlers import RotatingFileHandler
 import os
 from collections import deque
 import requests
@@ -6,6 +8,23 @@ import time
 from bs4 import BeautifulSoup
 from flask import Flask, request, jsonify, render_template_string
 os.environ['HTTPX_PROXIES'] = 'null'
+
+# ─── LOGGING ────────────────────────────────────────────────
+_log_dir = os.environ.get('LOG_DIR', 'logs')
+os.makedirs(_log_dir, exist_ok=True)
+_log_file = os.path.join(_log_dir, 'app.log')
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(name)s: %(message)s',
+    handlers=[
+        RotatingFileHandler(
+            _log_file, maxBytes=5 * 1024 * 1024, backupCount=3
+        ),
+        logging.StreamHandler(),
+    ],
+)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 GOOGLE_CLOUD_PROJECT = os.environ.get('GOOGLE_CLOUD_PROJECT') or os.environ.get('GCP_PROJECT')
@@ -107,6 +126,9 @@ def _fetch_blog():
         combined = ""
         for url in urls:
             r = requests.get(url, headers=headers, timeout=8)
+            if not r.ok:
+                logger.warning("Blog fetch returned status %s for %s", r.status_code, url)
+                continue
             soup = BeautifulSoup(r.text, "html.parser")
             for tag in soup(["script", "style", "nav", "header", "footer"]):
                 tag.decompose()
@@ -119,6 +141,7 @@ def _fetch_blog():
             _cache["content"] = combined[:6000]
             _cache["last"] = time.time()
     except Exception:
+        logger.exception("Blog fetch failed; using fallback content")
         _cache["content"] = FALLBACK
 
 def _bg_refresh():
@@ -188,6 +211,9 @@ class BadRequestError(Exception):
     """İstek gövdesi beklenen formatta olmadığında fırlatılır."""
 
 
+_MAX_FIELD_LENGTH = 2000
+
+
 def require_json(required_fields=None):
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
@@ -197,6 +223,10 @@ def require_json(required_fields=None):
     missing = [field for field in required_fields if not str(data.get(field, '')).strip()]
     if missing:
         raise BadRequestError(f"Eksik alan(lar): {', '.join(missing)}")
+
+    for key, value in data.items():
+        if isinstance(value, str) and len(value) > _MAX_FIELD_LENGTH:
+            raise BadRequestError(f"İstek alanı maksimum uzunluğu ({_MAX_FIELD_LENGTH} karakter) aşıyor.")
 
     return data
 
@@ -212,6 +242,7 @@ def handle_bad_request(error):
 
 @app.errorhandler(Exception)
 def handle_unexpected_error(_error):
+    logger.exception("Unhandled exception")
     return jsonify(error="İşlem sırasında bir hata oluştu."), 500
 
 
