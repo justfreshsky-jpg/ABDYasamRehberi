@@ -1,16 +1,78 @@
 import os
-import traceback
+from collections import deque
 import requests
 import threading
 import time
 from bs4 import BeautifulSoup
 from flask import Flask, request, jsonify, render_template_string
-from groq import Groq
 os.environ['HTTPX_PROXIES'] = 'null'
 
 app = Flask(__name__)
-GROQ_KEY = os.environ.get('GROQ_KEY')
-client = Groq(api_key=GROQ_KEY) if GROQ_KEY else None
+GOOGLE_CLOUD_PROJECT = os.environ.get('GOOGLE_CLOUD_PROJECT') or os.environ.get('GCP_PROJECT')
+VERTEX_LOCATION = os.environ.get('VERTEX_LOCATION', 'us-central1')
+GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-1.5-flash')
+_token_cache = {'value': '', 'expires_at': 0}
+
+
+def get_access_token():
+    now = time.time()
+    if _token_cache['value'] and _token_cache['expires_at'] > now:
+        return _token_cache['value']
+
+    env_token = os.environ.get('GOOGLE_OAUTH_ACCESS_TOKEN')
+    if env_token:
+        _token_cache['value'] = env_token
+        _token_cache['expires_at'] = now + 3300
+        return env_token
+
+    metadata_url = 'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token'
+    try:
+        r = requests.get(metadata_url, headers={'Metadata-Flavor': 'Google'}, timeout=(1.5, 2.0))
+        if not r.ok:
+            return ''
+        data = r.json()
+        token = data.get('access_token', '')
+        expires_in = max(30, int(data.get('expires_in', 300)) - 30)
+        _token_cache['value'] = token
+        _token_cache['expires_at'] = now + expires_in
+        return token
+    except Exception:
+        return ''
+
+
+def call_vertex(prompt):
+    if not GOOGLE_CLOUD_PROJECT:
+        return ''
+
+    token = get_access_token()
+    if not token:
+        return ''
+
+    endpoint = (
+        f"https://{VERTEX_LOCATION}-aiplatform.googleapis.com/v1/"
+        f"projects/{GOOGLE_CLOUD_PROJECT}/locations/{VERTEX_LOCATION}/"
+        f"publishers/google/models/{GEMINI_MODEL}:generateContent"
+    )
+    payload = {
+        'contents': [{'role': 'user', 'parts': [{'text': prompt}]}],
+        'generationConfig': {'maxOutputTokens': 2000, 'temperature': 0.6}
+    }
+    headers = {'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}
+
+    try:
+        r = requests.post(endpoint, headers=headers, json=payload, timeout=(3, 30))
+    except Exception:
+        return ''
+
+    if not r.ok:
+        return ''
+
+    try:
+        data = r.json()
+        return data['candidates'][0]['content']['parts'][0]['text']
+    except Exception:
+        return ''
+
 
 # ─── ARKA PLANDA BLOG İÇERİĞİ ─────────────────────────────
 _cache = {"content": "", "last": 0}
@@ -72,42 +134,92 @@ def get_context():
     return _cache["content"]
 
 # ─── AI ─────────────────────────────────────────────
+def local_fallback_reply(user):
+    sample = "\n".join(
+        line for line in get_context().splitlines()
+        if line.strip() and line.strip() != "---"
+    )
+    sample = "\n".join(sample.splitlines()[:8])
+    return (
+        "⚠️ Vertex AI yapılandırması eksik, bu yüzden AI yanıtı yerine hızlı rehber özeti gösteriyorum.\n\n"
+        f"📌 Sorun: {user or 'Genel soru'}\n"
+        "✅ Cloud Run ortam değişkenlerine GOOGLE_CLOUD_PROJECT ve VERTEX_LOCATION ekleyince tam AI cevapları geri gelir.\n"
+        "✅ Servis hesabına Vertex AI User (roles/aiplatform.user) yetkisi ver.\n"
+        "\nHızlı Bilgiler:\n"
+        f"{sample}"
+    )
+
+
 def llm(system, user):
-    if not client:
-        return "❌ GROQ_KEY eksik."
-    
+    if not GOOGLE_CLOUD_PROJECT:
+        return local_fallback_reply(user)
+
     usa_prompt = """
     🇺🇸 SADECE ABD İLE İLGİLİ CEVAP VER
     ✅ ABD VİZE / SSN / BANK / EV / UBER / VERGİ / SAĞLIK
-    • Her adıma emoji koy: ✅ 🚀 💰 📱 🏠 🪪 ✈️ 🏥 💳 
+    • Her adıma emoji koy: ✅ 🚀 💰 📱 🏠 🪪 ✈️ 🏥 💳
     • ÖNEMLİ kelimeleri YÜKSEK HARF
     • Kısa paragraf, uzun liste
+    • ÇIKTI ŞABLONU KULLAN:
+      1) Hızlı Özet (3 madde)
+      2) Adım Adım Kontrol Listesi
+      3) Sık Hata / Riskler
+      4) Resmi Linkler (varsa)
+      5) Sonraki Adım (tek net öneri)
     ⚠️ SADECE ABD / NJ / NY!
     """
-    
-    full_system = system + "\n\n" + usa_prompt + "\n\nBlog verisi:\n" + get_context()
-    
-    r = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[{"role":"system","content":full_system},{"role":"user","content":user}],
-        max_tokens=2000, temperature=0.6
-    )
-    
-    text = r.choices[0].message.content
-    text = text.replace('**', '')  # Bold sil
-    
-    # SADECE Çince sil, emoji + Türkçe koru
-    text = ''.join(c for c in text 
-                   if (ord(c) < 128 or c in 'ğüşıöçĞÜŞİÖÇ' or 
-                       0x1F600 <= ord(c) <= 0x1F64F or  # Emoji range
-                       0x1F300 <= ord(c) <= 0x1F5FF))  # Diğer emoji
-    
+
+    full_system = system + "\n\n" + usa_prompt + "\n\nReferans veri:\n" + get_context()
+
+    text = call_vertex(f"{full_system}\n\nKullanıcı sorusu:\n{user}")
+    if not text:
+        return local_fallback_reply(user)
+    text = text.replace('**', '')
+
+    text = ''.join(c for c in text
+                   if (ord(c) < 128 or c in 'ğüşıöçĞÜŞİÖÇ' or
+                       0x1F600 <= ord(c) <= 0x1F64F or
+                       0x1F300 <= ord(c) <= 0x1F5FF))
+
     return text.strip()
+
+
+class BadRequestError(Exception):
+    """İstek gövdesi beklenen formatta olmadığında fırlatılır."""
+
+
+def require_json(required_fields=None):
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        raise BadRequestError("JSON body gerekli.")
+
+    required_fields = required_fields or []
+    missing = [field for field in required_fields if not str(data.get(field, '')).strip()]
+    if missing:
+        raise BadRequestError(f"Eksik alan(lar): {', '.join(missing)}")
+
+    return data
+
+
+def llm_json(system_prompt, user_prompt):
+    return jsonify(result=llm(system_prompt, user_prompt))
+
+
+@app.errorhandler(BadRequestError)
+def handle_bad_request(error):
+    return jsonify(error=str(error)), 400
+
+
+@app.errorhandler(Exception)
+def handle_unexpected_error(_error):
+    return jsonify(error="İşlem sırasında bir hata oluştu."), 500
+
 
 # ─── HTML ─────────────────────────────────────────────
 HTML = """<!DOCTYPE html>
 <html lang="tr">
 <head>
+<meta charset="UTF-8">
 <title>ABD Yaşam Rehberi</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -155,23 +267,40 @@ textarea{resize:vertical;min-height:90px}
 .output-wrap:hover .copy-btn{opacity:1}
 .spinner{display:inline-block;width:16px;height:16px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
-.footer{text-align:center;padding:32px 20px;color:#64748b;font-size:.88em;line-height:2;background:#fff;margin-top:20px;border-radius:16px}
+.trust-row{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0 10px}.trust-chip{background:#fff;border:1px solid #dbeafe;color:#1e3a8a;padding:8px 12px;border-radius:999px;font-size:.82em;font-weight:600}.goal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:8px 0 18px}.goal-card{background:#fff;border:2px solid #e2e8f0;border-radius:12px;padding:12px;cursor:pointer;transition:.2s}.goal-card:hover{border-color:#3b82f6;transform:translateY(-2px)}.goal-card h4{font-size:.95em;color:#1e3a8a;margin-bottom:4px}.goal-card p{font-size:.8em;color:#64748b}.hero-cta{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:14px}.hero-cta button{background:#fff;color:#1e3a8a;border:none;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer}.footer{text-align:center;padding:32px 20px;color:#64748b;font-size:.88em;line-height:2;background:#fff;margin-top:20px;border-radius:16px}
 </style>
 </head>
 <body>
 <div class="hero">
-  <h1>🇺🇸 ABD'ye Hoş Geldin!</h1>
-  <p>Türkler için pratik AI rehberi — sıfırdan adım adım</p>
+  <h1>🇺🇸 ABD Yaşam Rehberi</h1>
+  <p>ABD'de ilk 30 gün için kişisel yol haritanı 2-3 dakikada oluştur.</p>
   <div class="steps">
-    <span class="step">1️⃣ Vize Al</span>
-    <span class="step">2️⃣ SSN Çıkar</span>
-    <span class="step">3️⃣ Banka Aç</span>
-    <span class="step">4️⃣ Ev Bul</span>
-    <span class="step">5️⃣ Çalış / Para Kazan</span>
+    <span class="step">1️⃣ Konu Seç</span>
+    <span class="step">2️⃣ Bilgini Gir</span>
+    <span class="step">3️⃣ Kontrol Listeni Al</span>
+  </div>
+  <div class="hero-cta">
+    <button onclick="quickStart('ssn')">SSN ile Başla</button>
+    <button onclick="quickStart('vize')">Vize Planı</button>
+    <button onclick="quickStart('sorgu')">Hızlı Soru Sor</button>
   </div>
 </div>
 <div class="container">
-  <div class="tabs">
+  <div class="trust-row">
+    <span class="trust-chip">🔐 Kişisel veri saklanmaz</span>
+    <span class="trust-chip">🧭 Adım adım kontrol listesi</span>
+    <span class="trust-chip">🗓 Güncelleme: 2026</span>
+  </div>
+  <div class="hint" style="margin-top:8px">
+    🍎 <strong>Kullanım ipucu:</strong> Önce bir hedef kartı seç, sonra kendi durumuna göre rehber üret.
+  </div>
+  <div class="goal-grid">
+    <div class="goal-card" onclick="quickStart('ssn')"><h4>SSN Başvurusu</h4><p>Belgeler + ofis adımları</p></div>
+    <div class="goal-card" onclick="quickStart('banka')"><h4>Banka Hesabı</h4><p>SSN yoksa seçenekler</p></div>
+    <div class="goal-card" onclick="quickStart('ev')"><h4>Ev Kiralama</h4><p>Bütçe + sözleşme kontrolü</p></div>
+    <div class="goal-card" onclick="quickStart('vergi')"><h4>Vergi Rehberi</h4><p>Form + son tarih özeti</p></div>
+  </div>
+  <div class="tabs" id="topicTabs">
     <button class="active" onclick="show('vize',this)"><i class="fas fa-passport"></i>Vize</button>
     <button onclick="show('vergi',this)"><i class="fas fa-calculator"></i>Vergi</button>
     <button onclick="show('rideshare',this)"><i class="fas fa-car"></i>İş (Rideshare)</button>
@@ -185,6 +314,7 @@ textarea{resize:vertical;min-height:90px}
     <button onclick="show('wise',this)"><i class="fas fa-exchange-alt"></i>Para Transferi</button>
     <button onclick="show('ucak',this)"><i class="fas fa-plane"></i>Uçak</button>
     <button onclick="show('sorgu',this)"><i class="fas fa-question-circle"></i>Soru Sor</button>
+    <button onclick="show('feedback',this)"><i class="fas fa-comment-dots"></i>Geri Bildirim</button>
   </div>
 
   <div id="vize" class="tab active"><div class="card">
@@ -195,7 +325,7 @@ textarea{resize:vertical;min-height:90px}
       <div class="field"><label>State</label><input id="v2" placeholder="örn. New Jersey"></div>
     </div>
     <div class="field"><label>Özel Durum</label><input id="v3" placeholder="örn. İlk başvuru, uzatma, reddedildim"></div>
-    <button class="btn" id="vb" onclick="call('/vize',{tip:g('v1'),state:g('v2'),durum:g('v3')},'vo','vb','Vize Rehberi Oluştur')">Vize Rehberi Oluştur</button>
+    <button class="btn" id="vb" onclick="call('/vize',{tip:g('v1'),state:g('v2'),durum:g('v3')},'vo','vb','Kişisel Vize Planı Oluştur')">Kişisel Vize Planı Oluştur</button>
     <div class="output-wrap"><div id="vo" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('vo')">Kopyala</button></div>
   </div></div>
 
@@ -210,7 +340,7 @@ textarea{resize:vertical;min-height:90px}
       <div class="field"><label>Vize Tipin</label><select id="t3"><option>F-1 / J-1</option><option>H-1B</option><option>Green Card</option><option>Vatandaş</option></select></div>
       <div class="field"><label>State</label><input id="t4" placeholder="New Jersey"></div>
     </div>
-    <button class="btn" id="tb" onclick="call('/vergi',{form:g('t1'),kazanc:g('t2'),vize:g('t3'),state:g('t4')},'to','tb','Vergi Rehberi Oluştur')">Vergi Rehberi Oluştur</button>
+    <button class="btn" id="tb" onclick="call('/vergi',{form:g('t1'),kazanc:g('t2'),vize:g('t3'),state:g('t4')},'to','tb','Vergi Kontrol Listesi Oluştur')">Vergi Kontrol Listesi Oluştur</button>
     <div class="output-wrap"><div id="to" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('to')">Kopyala</button></div>
   </div></div>
 
@@ -222,7 +352,7 @@ textarea{resize:vertical;min-height:90px}
       <div class="field"><label>State</label><input id="r2" placeholder="New Jersey"></div>
     </div>
     <div class="field"><label>Konu</label><select id="r3"><option>Nasıl başlarım?</option><option>1099 formu / vergi</option><option>Haftada ne kadar kazanırım?</option><option>Masraf düşümü (deduction)</option></select></div>
-    <button class="btn" id="rb" onclick="call('/rideshare',{app:g('r1'),state:g('r2'),konu:g('r3')},'ro','rb','Rideshare Rehberi')">Rehber Oluştur</button>
+    <button class="btn" id="rb" onclick="call('/rideshare',{app:g('r1'),state:g('r2'),konu:g('r3')},'ro','rb','Rideshare Rehberi')">Planı Oluştur</button>
     <div class="output-wrap"><div id="ro" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('ro')">Kopyala</button></div>
   </div></div>
 
@@ -234,7 +364,7 @@ textarea{resize:vertical;min-height:90px}
       <div class="field"><label>Bütçe ($/ay)</label><input id="e2" type="number" placeholder="1200"></div>
     </div>
     <div class="field"><label>Özel Durum</label><input id="e3" placeholder="örn. SSN yok, kredi skoru yok, evcil hayvan var"></div>
-    <button class="btn" id="eb" onclick="call('/ev',{sehir:g('e1'),butce:g('e2'),durum:g('e3')},'eo','eb','Ev Bulma Rehberi')">Rehber Oluştur</button>
+    <button class="btn" id="eb" onclick="call('/ev',{sehir:g('e1'),butce:g('e2'),durum:g('e3')},'eo','eb','Ev Bulma Rehberi')">Planı Oluştur</button>
     <div class="output-wrap"><div id="eo" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('eo')">Kopyala</button></div>
   </div></div>
 
@@ -347,6 +477,16 @@ textarea{resize:vertical;min-height:90px}
     <div class="output-wrap"><div id="qo" class="output">Cevap burada çıkacak...</div><button class="copy-btn" onclick="cp('qo')">Kopyala</button></div>
   </div></div>
 
+
+  <div id="feedback" class="tab"><div class="card">
+    <h2><i class="fas fa-comment-dots"></i> Site Geri Bildirimi</h2>
+    <div class="hint">💬 Deneyimini paylaş: ne işe yaradı, ne eksik, neyi geliştirelim?</div>
+    <div class="field"><label>Mesajın</label><textarea id="fb1" rows="4" placeholder="Örn. Tab geçişleri daha hızlı olabilir, çıktı PDF olsun, daha fazla resmi link eklenebilir..."></textarea></div>
+    <div class="field"><label>İsteğe bağlı e-posta</label><input id="fb2" placeholder="name@example.com"></div>
+    <button class="btn" id="fbb" onclick="sendFeedback()">Geri Bildirimi Gönder</button>
+    <div class="output-wrap"><div id="fbo" class="output">Geri bildirim durum mesajı burada görünecek...</div></div>
+  </div></div>
+
 </div>
 <div class="footer">
   <strong>🇺🇸 ABD Yaşam Rehberi</strong><br>
@@ -359,11 +499,26 @@ textarea{resize:vertical;min-height:90px}
 </div>
 <script>
 function g(id){return document.getElementById(id).value;}
-function show(tab,btn){
+const lastAnswers = {};
+function quickStart(tab){
+  const target=document.getElementById(tab);
+  if(!target) return;
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
-  document.getElementById(tab).classList.add('active');
-  btn.classList.add('active');
+  target.classList.add('active');
+  const match=[...document.querySelectorAll('.tabs button')].find(b=>{const h=b.getAttribute('onclick'); return h && h.indexOf("'"+tab+"'")>-1;});
+  if(match) match.classList.add('active');
+  const firstInput=target.querySelector('input,select,textarea');
+  if(firstInput) firstInput.focus({preventScroll:true});
+  target.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function show(tab,btn){
+  const target=document.getElementById(tab);
+  if(!target) return;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
+  target.classList.add('active');
+  if(btn) btn.classList.add('active');
 }
 function cp(id){
   navigator.clipboard.writeText(document.getElementById(id).innerText).then(()=>{
@@ -376,19 +531,94 @@ async function call(endpoint,data,outId,btnId,label){
   const out=document.getElementById(outId);
   const btn=document.getElementById(btnId);
   btn.disabled=true;
-  btn.innerHTML='<span class="spinner"></span>Üretiliyor...';
-  out.textContent='AI düşünüyor...';
+  btn.innerHTML='<span class=\"spinner\"></span>Adım 1/3: Bilgi hazırlanıyor';
+  out.textContent='Adım 2/3: Vertex AI ile yanıt hazırlanıyor...';
   try{
     const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
-    const j=await r.json();
-    out.textContent=j.result;
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok){
+      out.textContent='Hata: '+(j.error || 'İstek işlenemedi.');
+      return;
+    }
+    out.textContent='Adım 3/3: Sonuç hazır ✅\\n\\n'+(j.result || 'Sonuç üretilemedi.');
+    lastAnswers[outId]=j.result || '';
+    ensureFollowupBox(outId);
   }catch(e){
-    out.textContent='Hata: '+e.message;
+    out.textContent='Bağlantı hatası: '+e.message;
   }finally{
     btn.disabled=false;
     btn.textContent=label;
   }
 }
+
+function ensureFollowupBox(outId){
+  const out=document.getElementById(outId);
+  const wrap=out && out.closest('.output-wrap');
+  if(!wrap) return;
+  const ns=wrap.nextElementSibling;
+  if(ns && ns.classList && ns.classList.contains('followup-wrap')) return;
+
+  const box=document.createElement('div');
+  box.className='followup-wrap';
+  box.style.marginTop='10px';
+
+  const field=document.createElement('div');
+  field.className='field';
+  const label=document.createElement('label');
+  label.textContent='Yanıtı derinleştir (takip sorusu)';
+  const textarea=document.createElement('textarea');
+  textarea.id='fu-'+outId;
+  textarea.rows=2;
+  textarea.placeholder='Bu yanıtın şu kısmını daha detaylı anlat...';
+  field.appendChild(label);
+  field.appendChild(textarea);
+
+  const btn=document.createElement('button');
+  btn.id='fub-'+outId;
+  btn.className='btn';
+  btn.style.margin='6px 0 0';
+  btn.textContent='Takip Sorusu Sor';
+  btn.addEventListener('click', function(){
+    followup(outId, textarea.id, btn.id);
+  });
+
+  box.appendChild(field);
+  box.appendChild(btn);
+  wrap.parentNode.insertBefore(box, wrap.nextSibling);
+}
+
+
+function followup(outId,inputId,btnId){
+  const el=document.getElementById(inputId);
+  const q=((el && el.value) || '').trim();
+  if(!q) return;
+  const previous=lastAnswers[outId] || '';
+  const prompt=`Önceki yanıt:
+${previous}
+
+Takip sorusu:
+${q}
+
+Lütfen daha anlaşılır, adım adım ve örnekli anlat.`;
+  call('/sorgu',{soru:prompt},outId,btnId,'Takip Sorusu Sor');
+}
+
+async function sendFeedback(){
+  const out=document.getElementById('fbo');
+  const btn=document.getElementById('fbb');
+  btn.disabled=true;
+  out.textContent='Gönderiliyor...';
+  try{
+    const r=await fetch('/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mesaj:g('fb1'),iletisim:g('fb2')})});
+    const j=await r.json().catch(()=>({}));
+    out.textContent=r.ok ? (j.result || 'Teşekkürler!') : ('Hata: '+(j.error || 'Gönderilemedi'));
+  }catch(e){
+    out.textContent='Bağlantı hatası: '+e.message;
+  }finally{
+    btn.disabled=false;
+  }
+}
+
 </script>
 </body>
 </html>"""
@@ -398,114 +628,137 @@ async function call(endpoint,data,outId,btnId,label){
 def index():
     return render_template_string(HTML)
 
+
+@app.route('/healthz')
+def healthz():
+    return jsonify(
+        status='ok',
+        ai_provider='vertex_ai_gemini',
+        vertex_configured=bool(GOOGLE_CLOUD_PROJECT and get_access_token()),
+        project=GOOGLE_CLOUD_PROJECT,
+        location=VERTEX_LOCATION,
+        model=GEMINI_MODEL
+    )
+
 @app.route('/vize', methods=['POST'])
 def do_vize():
-    try:
-        d = request.json
-        return jsonify(result=llm("ABD göçmenlik uzmanısın, Türkçe pratik rehber ver.",
-            f"{d['tip']} vizesi. State: {d.get('state','')}. Durum: {d.get('durum','')}. Belgeler, formlar, ücretler, hatalar, linkler."))
-    except Exception: return jsonify(result=traceback.format_exc())
+    d = require_json(["tip"])
+    return llm_json(
+        "ABD göçmenlik uzmanısın, Türkçe pratik rehber ver.",
+        f"{d['tip']} vizesi. State: {d.get('state','')}. Durum: {d.get('durum','')}. Belgeler, formlar, ücretler, hatalar, linkler."
+    )
 
 @app.route('/vergi', methods=['POST'])
 def do_vergi():
-    try:
-        d = request.json
-        return jsonify(result=llm("ABD vergi uzmanısın, Türkçe sade anlat.",
-            f"Form: {d['form']}. Kazanç: ${d.get('kazanc',0)}. Vize: {d.get('vize','')}. State: {d.get('state','')}. Doldurma rehberi, iade tahmini, deadline'lar."))
-    except Exception: return jsonify(result=traceback.format_exc())
+    d = require_json(["form"])
+    return llm_json(
+        "ABD vergi uzmanısın, Türkçe sade anlat.",
+        f"Form: {d['form']}. Kazanç: ${d.get('kazanc',0)}. Vize: {d.get('vize','')}. State: {d.get('state','')}. Doldurma rehberi, iade tahmini, deadline'lar."
+    )
 
 @app.route('/rideshare', methods=['POST'])
 def do_rideshare():
-    try:
-        d = request.json
-        return jsonify(result=llm("Rideshare ve gig economy uzmanısın, Türkçe yaz.",
-            f"{d['app']} - {d.get('state','')}. Konu: {d.get('konu','')}. Belgeler, kazanç, vergi, ipuçları."))
-    except Exception: return jsonify(result=traceback.format_exc())
+    d = require_json(["app"])
+    return llm_json(
+        "Rideshare ve gig economy uzmanısın, Türkçe yaz.",
+        f"{d['app']} - {d.get('state','')}. Konu: {d.get('konu','')}. Belgeler, kazanç, vergi, ipuçları."
+    )
 
 @app.route('/ev', methods=['POST'])
 def do_ev():
-    try:
-        d = request.json
-        return jsonify(result=llm("ABD emlak uzmanısın, Türkçe yaz.",
-            f"{d.get('sehir','')} ${d.get('butce','')} bütçe. Durum: {d.get('durum','')}. Siteler, belgeler, müzakere tüyoları."))
-    except Exception: return jsonify(result=traceback.format_exc())
+    d = require_json()
+    return llm_json(
+        "ABD emlak uzmanısın, Türkçe yaz.",
+        f"{d.get('sehir','')} ${d.get('butce','')} bütçe. Durum: {d.get('durum','')}. Siteler, belgeler, müzakere tüyoları."
+    )
 
 @app.route('/saglik', methods=['POST'])
 def do_saglik():
-    try:
-        d = request.json
-        return jsonify(result=llm("ABD sağlık sistemi uzmanısın, Türkçe pratik yaz.",
-            f"{d.get('state','')} - {d.get('durum','')}. Adresler, belgeler, Medicaid, ücretsiz klinikler."))
-    except Exception: return jsonify(result=traceback.format_exc())
+    d = require_json()
+    return llm_json(
+        "ABD sağlık sistemi uzmanısın, Türkçe pratik yaz.",
+        f"{d.get('state','')} - {d.get('durum','')}. Adresler, belgeler, Medicaid, ücretsiz klinikler."
+    )
 
 @app.route('/ehliyet', methods=['POST'])
 def do_ehliyet():
-    try:
-        d = request.json
-        return jsonify(result=llm("ABD DMV uzmanısın, Türkçe anlat.",
-            f"{d.get('state','')} ehliyet: {d.get('durum','')}. 6 Points belgeler, sınav, randevu, ücretler."))
-    except Exception: return jsonify(result=traceback.format_exc())
+    d = require_json()
+    return llm_json(
+        "ABD DMV uzmanısın, Türkçe anlat.",
+        f"{d.get('state','')} ehliyet: {d.get('durum','')}. 6 Points belgeler, sınav, randevu, ücretler."
+    )
 
 @app.route('/ssn', methods=['POST'])
 def do_ssn():
-    try:
-        d = request.json
-        return jsonify(result=llm(
-            "ABD SSN uzmanısın. Türk göçmenler için Türkçe pratik rehber ver. NJ odaklı.",
-            f"Vize: {d['vize']}. State: {d.get('state','NJ')}. Durum: {d.get('durum','')}. "
-            "SSN için gerekli belgeler, başvuru adımları, NJ SSA ofis adresleri, "
-            "F-1/J-1 için CPT/OPT şartı, ITIN alternatifi, sık hatalar."
-        ))
-    except Exception:
-        return jsonify(result=traceback.format_exc())
+    d = require_json(["vize"])
+    return llm_json(
+        "ABD SSN uzmanısın. Türk göçmenler için Türkçe pratik rehber ver. NJ odaklı.",
+        f"Vize: {d['vize']}. State: {d.get('state','NJ')}. Durum: {d.get('durum','')}. "
+        "SSN için gerekli belgeler, başvuru adımları, NJ SSA ofis adresleri, "
+        "F-1/J-1 için CPT/OPT şartı, ITIN alternatifi, sık hatalar."
+    )
 
 @app.route('/banka', methods=['POST'])
 def do_banka():
-    try:
-        d = request.json
-        return jsonify(result=llm("ABD bankacılık uzmanısın, Türkçe yaz.",
-            f"Konu: {d.get('durum','')}. Hangi banka, belgeler, credit score, secured card."))
-    except Exception: return jsonify(result=traceback.format_exc())
+    d = require_json()
+    return llm_json(
+        "ABD bankacılık uzmanısın, Türkçe yaz.",
+        f"Konu: {d.get('durum','')}. Hangi banka, belgeler, credit score, secured card."
+    )
 
 @app.route('/telefon', methods=['POST'])
 def do_telefon():
-    try:
-        d = request.json
-        return jsonify(result=llm("ABD telekomünikasyon uzmanısın, Türkçe rehber.",
-            f"Konu: {d.get('konu','')}. Adım adım kurulum, fiyatlar, alternatifler."))
-    except Exception: return jsonify(result=traceback.format_exc())
+    d = require_json()
+    return llm_json(
+        "ABD telekomünikasyon uzmanısın, Türkçe rehber.",
+        f"Konu: {d.get('konu','')}. Adım adım kurulum, fiyatlar, alternatifler."
+    )
 
 @app.route('/arac', methods=['POST'])
 def do_arac():
-    try:
-        d = request.json
-        return jsonify(result=llm("ABD otomotiv uzmanısın, Türkçe yaz.",
-            f"{d.get('state','')} - {d.get('konu','')}. Belgeler, sigorta, fiyat, CarMax/Carvana."))
-    except Exception: return jsonify(result=traceback.format_exc())
+    d = require_json()
+    return llm_json(
+        "ABD otomotiv uzmanısın, Türkçe yaz.",
+        f"{d.get('state','')} - {d.get('konu','')}. Belgeler, sigorta, fiyat, CarMax/Carvana."
+    )
 
 @app.route('/wise', methods=['POST'])
 def do_wise():
-    try:
-        d = request.json
-        return jsonify(result=llm("Para transferi uzmanısın, Türkçe anlat.",
-            f"Konu: {d.get('konu','')}. Adımlar, komisyonlar, limitler, alternatifler."))
-    except Exception: return jsonify(result=traceback.format_exc())
+    d = require_json()
+    return llm_json(
+        "Para transferi uzmanısın, Türkçe anlat.",
+        f"Konu: {d.get('konu','')}. Adımlar, komisyonlar, limitler, alternatifler."
+    )
 
 @app.route('/ucak', methods=['POST'])
 def do_ucak():
-    try:
-        d = request.json
-        return jsonify(result=llm("Havacılık uzmanısın, Türkçe pratik rehber.",
-            f"{d.get('havayolu','')} - {d.get('konu','')}. Detaylı bilgi, ücretler, ipuçları."))
-    except Exception: return jsonify(result=traceback.format_exc())
+    d = require_json()
+    return llm_json(
+        "Havacılık uzmanısın, Türkçe pratik rehber.",
+        f"{d.get('havayolu','')} - {d.get('konu','')}. Detaylı bilgi, ücretler, ipuçları."
+    )
 
 @app.route('/sorgu', methods=['POST'])
 def do_sorgu():
-    try:
-        d = request.json
-        return jsonify(result=llm("ABD'deki Türkler için pratik rehber uzmanısın. Türkçe, net, adım adım cevapla.",
-            d.get('soru', '')))
-    except Exception: return jsonify(result=traceback.format_exc())
+    d = require_json()
+    return llm_json(
+        "ABD’de yaşayan Türkler için pratik rehber uzmanısın. Cevapları sade, adım adım ve güvenli şekilde ver.",
+        d.get('soru', '')
+    )
+
+
+_feedback_store = deque(maxlen=500)
+
+
+@app.route('/feedback', methods=['POST'])
+def do_feedback():
+    d = require_json(['mesaj'])
+    _feedback_store.append({
+        'mesaj': d.get('mesaj', '').strip(),
+        'iletisim': d.get('iletisim', '').strip(),
+        'ts': int(time.time())
+    })
+    return jsonify(result='Teşekkürler! Geri bildirimin alındı ve iyileştirme listesine eklendi.', total_feedback=len(_feedback_store))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
