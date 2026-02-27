@@ -67,3 +67,9 @@ gcloud run services update amerikarrehbersitesi \
 ```
 
 Ayrıca Cloud Run servis hesabına en az `roles/aiplatform.user` rolü verin.
+
+
+## Ek özellikler
+- Yanıt kartlarında **Takip Sorusu Sor** alanı ile mevcut cevabı derinleştirebilirsin.
+- **Geri Bildirim** sekmesinden mesaj + opsiyonel iletişim bırakabilirsin (`/feedback`).
+- Geri bildirimler bellekte tutulur ve son 500 kayıtla sınırlandırılır.
