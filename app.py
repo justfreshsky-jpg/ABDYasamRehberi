@@ -298,6 +298,7 @@ textarea{resize:vertical;min-height:90px}
     <button onclick="show('wise',this)"><i class="fas fa-exchange-alt"></i>Para Transferi</button>
     <button onclick="show('ucak',this)"><i class="fas fa-plane"></i>Uçak</button>
     <button onclick="show('sorgu',this)"><i class="fas fa-question-circle"></i>Soru Sor</button>
+    <button onclick="show('feedback',this)"><i class="fas fa-comment-dots"></i>Geri Bildirim</button>
   </div>
 
   <div id="vize" class="tab active"><div class="card">
@@ -308,7 +309,7 @@ textarea{resize:vertical;min-height:90px}
       <div class="field"><label>State</label><input id="v2" placeholder="örn. New Jersey"></div>
     </div>
     <div class="field"><label>Özel Durum</label><input id="v3" placeholder="örn. İlk başvuru, uzatma, reddedildim"></div>
-    <button class="btn" id="vb" onclick="call('/vize',{tip:g('v1'),state:g('v2'),durum:g('v3')},'vo','vb','Vize Rehberi Oluştur')">Vize Rehberi Oluştur</button>
+    <button class="btn" id="vb" onclick="call('/vize',{tip:g('v1'),state:g('v2'),durum:g('v3')},'vo','vb','Kişisel Vize Planı Oluştur')">Kişisel Vize Planı Oluştur</button>
     <div class="output-wrap"><div id="vo" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('vo')">Kopyala</button></div>
   </div></div>
 
@@ -323,7 +324,7 @@ textarea{resize:vertical;min-height:90px}
       <div class="field"><label>Vize Tipin</label><select id="t3"><option>F-1 / J-1</option><option>H-1B</option><option>Green Card</option><option>Vatandaş</option></select></div>
       <div class="field"><label>State</label><input id="t4" placeholder="New Jersey"></div>
     </div>
-    <button class="btn" id="tb" onclick="call('/vergi',{form:g('t1'),kazanc:g('t2'),vize:g('t3'),state:g('t4')},'to','tb','Vergi Rehberi Oluştur')">Vergi Rehberi Oluştur</button>
+    <button class="btn" id="tb" onclick="call('/vergi',{form:g('t1'),kazanc:g('t2'),vize:g('t3'),state:g('t4')},'to','tb','Vergi Kontrol Listesi Oluştur')">Vergi Kontrol Listesi Oluştur</button>
     <div class="output-wrap"><div id="to" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('to')">Kopyala</button></div>
   </div></div>
 
@@ -335,7 +336,7 @@ textarea{resize:vertical;min-height:90px}
       <div class="field"><label>State</label><input id="r2" placeholder="New Jersey"></div>
     </div>
     <div class="field"><label>Konu</label><select id="r3"><option>Nasıl başlarım?</option><option>1099 formu / vergi</option><option>Haftada ne kadar kazanırım?</option><option>Masraf düşümü (deduction)</option></select></div>
-    <button class="btn" id="rb" onclick="call('/rideshare',{app:g('r1'),state:g('r2'),konu:g('r3')},'ro','rb','Rideshare Rehberi')">Rehber Oluştur</button>
+    <button class="btn" id="rb" onclick="call('/rideshare',{app:g('r1'),state:g('r2'),konu:g('r3')},'ro','rb','Rideshare Rehberi')">Planı Oluştur</button>
     <div class="output-wrap"><div id="ro" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('ro')">Kopyala</button></div>
   </div></div>
 
@@ -347,7 +348,7 @@ textarea{resize:vertical;min-height:90px}
       <div class="field"><label>Bütçe ($/ay)</label><input id="e2" type="number" placeholder="1200"></div>
     </div>
     <div class="field"><label>Özel Durum</label><input id="e3" placeholder="örn. SSN yok, kredi skoru yok, evcil hayvan var"></div>
-    <button class="btn" id="eb" onclick="call('/ev',{sehir:g('e1'),butce:g('e2'),durum:g('e3')},'eo','eb','Ev Bulma Rehberi')">Rehber Oluştur</button>
+    <button class="btn" id="eb" onclick="call('/ev',{sehir:g('e1'),butce:g('e2'),durum:g('e3')},'eo','eb','Ev Bulma Rehberi')">Planı Oluştur</button>
     <div class="output-wrap"><div id="eo" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('eo')">Kopyala</button></div>
   </div></div>
 
@@ -460,6 +461,16 @@ textarea{resize:vertical;min-height:90px}
     <div class="output-wrap"><div id="qo" class="output">Cevap burada çıkacak...</div><button class="copy-btn" onclick="cp('qo')">Kopyala</button></div>
   </div></div>
 
+
+  <div id="feedback" class="tab"><div class="card">
+    <h2><i class="fas fa-comment-dots"></i> Site Geri Bildirimi</h2>
+    <div class="hint">💬 Deneyimini paylaş: ne işe yaradı, ne eksik, neyi geliştirelim?</div>
+    <div class="field"><label>Mesajın</label><textarea id="fb1" rows="4" placeholder="Örn. Tab geçişleri daha hızlı olabilir, çıktı PDF olsun, daha fazla resmi link eklenebilir..."></textarea></div>
+    <div class="field"><label>İsteğe bağlı e-posta</label><input id="fb2" placeholder="name@example.com"></div>
+    <button class="btn" id="fbb" onclick="sendFeedback()">Geri Bildirimi Gönder</button>
+    <div class="output-wrap"><div id="fbo" class="output">Geri bildirim durum mesajı burada görünecek...</div></div>
+  </div></div>
+
 </div>
 <div class="footer">
   <strong>🎓 Eğitmen AI Asistanı</strong><br>
@@ -516,6 +527,75 @@ async function call(endpoint,data,outId,btnId,label){
     btn.textContent=label;
   }
 }
+
+function ensureFollowupBox(outId){
+  const out=document.getElementById(outId);
+  const wrap=out && out.closest('.output-wrap');
+  if(!wrap) return;
+  const ns=wrap.nextElementSibling;
+  if(ns && ns.classList && ns.classList.contains('followup-wrap')) return;
+
+  const box=document.createElement('div');
+  box.className='followup-wrap';
+  box.style.marginTop='10px';
+
+  const field=document.createElement('div');
+  field.className='field';
+  const label=document.createElement('label');
+  label.textContent='Yanıtı derinleştir (takip sorusu)';
+  const textarea=document.createElement('textarea');
+  textarea.id='fu-'+outId;
+  textarea.rows=2;
+  textarea.placeholder='Bu yanıtın şu kısmını daha detaylı anlat...';
+  field.appendChild(label);
+  field.appendChild(textarea);
+
+  const btn=document.createElement('button');
+  btn.id='fub-'+outId;
+  btn.className='btn';
+  btn.style.margin='6px 0 0';
+  btn.textContent='Takip Sorusu Sor';
+  btn.addEventListener('click', function(){
+    followup(outId, textarea.id, btn.id);
+  });
+
+  box.appendChild(field);
+  box.appendChild(btn);
+  wrap.parentNode.insertBefore(box, wrap.nextSibling);
+}
+
+
+function followup(outId,inputId,btnId){
+  const el=document.getElementById(inputId);
+  const q=((el && el.value) || '').trim();
+  if(!q) return;
+  const previous=lastAnswers[outId] || '';
+  const prompt=`Önceki yanıt:
+${previous}
+
+Takip sorusu:
+${q}
+
+Lütfen daha anlaşılır, adım adım ve örnekli anlat.`;
+  call('/sorgu',{soru:prompt},outId,btnId,'Takip Sorusu Sor');
+}
+
+async function sendFeedback(){
+  const out=document.getElementById('fbo');
+  const btn=document.getElementById('fbb');
+  btn.disabled=true;
+  out.textContent='Gönderiliyor...';
+  try{
+    const r=await fetch('/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mesaj:g('fb1'),iletisim:g('fb2')})});
+    const j=await r.json().catch(()=>({}));
+    out.textContent=r.ok ? (j.result || 'Teşekkürler!') : ('Hata: '+(j.error || 'Gönderilemedi'));
+  }catch(e){
+    out.textContent='Bağlantı hatası: '+e.message;
+  }finally{
+    btn.disabled=false;
+  }
+}
+
 </script>
 </body>
 </html>"""
