@@ -10,41 +10,24 @@ app = Flask(__name__)
 GOOGLE_CLOUD_PROJECT = os.environ.get('GOOGLE_CLOUD_PROJECT') or os.environ.get('GCP_PROJECT')
 VERTEX_LOCATION = os.environ.get('VERTEX_LOCATION', 'us-central1')
 GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-1.5-flash')
-_token_cache = {'value': '', 'expires_at': 0}
 
 
 def get_access_token():
-    now = time.time()
-    if _token_cache['value'] and _token_cache['expires_at'] > now:
-        return _token_cache['value']
-
     env_token = os.environ.get('GOOGLE_OAUTH_ACCESS_TOKEN')
     if env_token:
-        _token_cache['value'] = env_token
-        _token_cache['expires_at'] = now + 3300
         return env_token
 
     metadata_url = 'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token'
     try:
-        r = requests.get(metadata_url, headers={'Metadata-Flavor': 'Google'}, timeout=(1.5, 2.0))
-        if not r.ok:
-            return ''
-        data = r.json()
-        token = data.get('access_token', '')
-        expires_in = max(30, int(data.get('expires_in', 300)) - 30)
-        _token_cache['value'] = token
-        _token_cache['expires_at'] = now + expires_in
-        return token
+        r = requests.get(metadata_url, headers={'Metadata-Flavor': 'Google'}, timeout=2)
+        return r.json().get('access_token', '') if r.ok else ''
     except Exception:
         return ''
 
 
 def call_vertex(prompt):
-    if not GOOGLE_CLOUD_PROJECT:
-        return ''
-
     token = get_access_token()
-    if not token:
+    if not token or not GOOGLE_CLOUD_PROJECT:
         return ''
 
     endpoint = (
@@ -53,25 +36,28 @@ def call_vertex(prompt):
         f"publishers/google/models/{GEMINI_MODEL}:generateContent"
     )
     payload = {
-        'contents': [{'role': 'user', 'parts': [{'text': prompt}]}],
+        'contents': [
+            {
+                'role': 'user',
+                'parts': [{'text': prompt}]
+            }
+        ],
         'generationConfig': {'maxOutputTokens': 2000, 'temperature': 0.6}
     }
-    headers = {'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}
+    headers = {
+        'Authorization': f'Bearer {token}',
+        'Content-Type': 'application/json'
+    }
 
-    try:
-        r = requests.post(endpoint, headers=headers, json=payload, timeout=(3, 30))
-    except Exception:
-        return ''
-
+    r = requests.post(endpoint, headers=headers, json=payload, timeout=30)
     if not r.ok:
         return ''
 
+    data = r.json()
     try:
-        data = r.json()
         return data['candidates'][0]['content']['parts'][0]['text']
     except Exception:
         return ''
-
 
 # ─── ARKA PLANDA BLOG İÇERİĞİ ─────────────────────────────
 _cache = {"content": "", "last": 0}
@@ -193,7 +179,7 @@ def require_json(required_fields=None):
         raise BadRequestError("JSON body gerekli.")
 
     required_fields = required_fields or []
-    missing = [field for field in required_fields if not str(data.get(field, '')).strip()]
+    missing = [field for field in required_fields if not data.get(field)]
     if missing:
         raise BadRequestError(f"Eksik alan(lar): {', '.join(missing)}")
 
@@ -218,8 +204,7 @@ def handle_unexpected_error(_error):
 HTML = """<!DOCTYPE html>
 <html lang="tr">
 <head>
-<meta charset="UTF-8">
-<title>ABD Yaşam Rehberi</title>
+<title>Eğitmen AI Asistanı</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
@@ -299,7 +284,7 @@ textarea{resize:vertical;min-height:90px}
     <div class="goal-card" onclick="quickStart('ev')"><h4>Ev Kiralama</h4><p>Bütçe + sözleşme kontrolü</p></div>
     <div class="goal-card" onclick="quickStart('vergi')"><h4>Vergi Rehberi</h4><p>Form + son tarih özeti</p></div>
   </div>
-  <div class="tabs" id="topicTabs">
+  <div class="tabs">
     <button class="active" onclick="show('vize',this)"><i class="fas fa-passport"></i>Vize</button>
     <button onclick="show('vergi',this)"><i class="fas fa-calculator"></i>Vergi</button>
     <button onclick="show('rideshare',this)"><i class="fas fa-car"></i>İş (Rideshare)</button>
@@ -488,7 +473,7 @@ textarea{resize:vertical;min-height:90px}
 
 </div>
 <div class="footer">
-  <strong>🇺🇸 ABD Yaşam Rehberi</strong><br>
+  <strong>🎓 Eğitmen AI Asistanı</strong><br>
   Hiçbir kişisel veri saklanmaz<br>
   <span style="font-size:.8em;color:#94a3b8">
     ⚠️ Bu araç yalnızca bilgilendirme amaçlıdır. Yapay zeka hata yapabilir.
@@ -498,17 +483,14 @@ textarea{resize:vertical;min-height:90px}
 </div>
 <script>
 function g(id){return document.getElementById(id).value;}
-const lastAnswers = {};
 function quickStart(tab){
   const target=document.getElementById(tab);
   if(!target) return;
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
   target.classList.add('active');
-  const match=[...document.querySelectorAll('.tabs button')].find(b=>{const h=b.getAttribute('onclick'); return h && h.indexOf("'"+tab+"'")>-1;});
+  const match=[...document.querySelectorAll('.tabs button')].find(b=>b.getAttribute('onclick')?.includes(`'${tab}'`));
   if(match) match.classList.add('active');
-  const firstInput=target.querySelector('input,select,textarea');
-  if(firstInput) firstInput.focus({preventScroll:true});
   target.scrollIntoView({behavior:'smooth',block:'start'});
 }
 function show(tab,btn){
@@ -532,14 +514,12 @@ async function call(endpoint,data,outId,btnId,label){
   out.textContent='Adım 2/3: Vertex AI ile yanıt hazırlanıyor...';
   try{
     const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
-    const j=await r.json().catch(()=>({}));
+    const j=await r.json();
     if(!r.ok){
       out.textContent='Hata: '+(j.error || 'İstek işlenemedi.');
       return;
     }
-    out.textContent='Adım 3/3: Sonuç hazır ✅\\n\\n'+(j.result || 'Sonuç üretilemedi.');
-    lastAnswers[outId]=j.result || '';
-    ensureFollowupBox(outId);
+    out.textContent='Adım 3/3: Sonuç hazır ✅\n\n'+(j.result || 'Sonuç üretilemedi.');
   }catch(e){
     out.textContent='Bağlantı hatası: '+e.message;
   }finally{
@@ -742,20 +722,6 @@ def do_sorgu():
         "ABD’de yaşayan Türkler için pratik rehber uzmanısın. Cevapları sade, adım adım ve güvenli şekilde ver.",
         d.get('soru', '')
     )
-
-
-_feedback_store = []
-
-
-@app.route('/feedback', methods=['POST'])
-def do_feedback():
-    d = require_json(['mesaj'])
-    _feedback_store.append({
-        'mesaj': d.get('mesaj', '').strip(),
-        'iletisim': d.get('iletisim', '').strip(),
-        'ts': int(time.time())
-    })
-    return jsonify(result='Teşekkürler! Geri bildirimin alındı ve iyileştirme listesine eklendi.')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
