@@ -604,7 +604,6 @@ textarea{resize:vertical;min-height:90px}
 </div>
 <script>
 function g(id){return document.getElementById(id).value;}
-const lastAnswers = {};
 function quickStart(tab){
   const target=document.getElementById(tab);
   if(!target) return;
@@ -657,66 +656,12 @@ async function call(endpoint,data,outId,btnId,label){
       return;
     }
     out.textContent='Adım 3/3: Sonuç hazır ✅\\n\\n'+(j.result || 'Sonuç üretilemedi.');
-    lastAnswers[outId]=j.result || '';
-    ensureFollowupBox(outId);
   }catch(e){
     out.textContent='Bağlantı hatası: '+e.message;
   }finally{
     btn.disabled=false;
     btn.textContent=label;
   }
-}
-
-function ensureFollowupBox(outId){
-  const out=document.getElementById(outId);
-  const wrap=out && out.closest('.output-wrap');
-  if(!wrap) return;
-  const ns=wrap.nextElementSibling;
-  if(ns && ns.classList && ns.classList.contains('followup-wrap')) return;
-
-  const box=document.createElement('div');
-  box.className='followup-wrap';
-  box.style.marginTop='10px';
-
-  const field=document.createElement('div');
-  field.className='field';
-  const label=document.createElement('label');
-  label.textContent='Yanıtı derinleştir (takip sorusu)';
-  const textarea=document.createElement('textarea');
-  textarea.id='fu-'+outId;
-  textarea.rows=2;
-  textarea.placeholder='Bu yanıtın şu kısmını daha detaylı anlat...';
-  field.appendChild(label);
-  field.appendChild(textarea);
-
-  const btn=document.createElement('button');
-  btn.id='fub-'+outId;
-  btn.className='btn';
-  btn.style.margin='6px 0 0';
-  btn.textContent='Takip Sorusu Sor';
-  btn.addEventListener('click', function(){
-    followup(outId, textarea.id, btn.id);
-  });
-
-  box.appendChild(field);
-  box.appendChild(btn);
-  wrap.parentNode.insertBefore(box, wrap.nextSibling);
-}
-
-
-function followup(outId,inputId,btnId){
-  const el=document.getElementById(inputId);
-  const q=((el && el.value) || '').trim();
-  if(!q) return;
-  const previous=lastAnswers[outId] || '';
-  const prompt=`Önceki yanıt:
-${previous}
-
-Takip sorusu:
-${q}
-
-Lütfen daha anlaşılır, adım adım ve örnekli anlat.`;
-  call('/sorgu',{soru:prompt},outId,btnId,'Takip Sorusu Sor');
 }
 
 async function sendFeedback(){
