@@ -5,9 +5,9 @@ from collections import deque
 import requests
 import threading
 import time
+from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from flask import Flask, request, jsonify, render_template_string
-os.environ['HTTPX_PROXIES'] = 'null'
 
 # ─── LOGGING ────────────────────────────────────────────────
 _log_dir = os.environ.get('LOG_DIR', 'logs')
@@ -31,31 +31,37 @@ GOOGLE_CLOUD_PROJECT = os.environ.get('GOOGLE_CLOUD_PROJECT') or os.environ.get(
 VERTEX_LOCATION = os.environ.get('VERTEX_LOCATION', 'us-central1')
 GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-1.5-flash')
 _token_cache = {'value': '', 'expires_at': 0}
+_token_lock = threading.Lock()
 
 
 def get_access_token():
     now = time.time()
-    if _token_cache['value'] and _token_cache['expires_at'] > now:
-        return _token_cache['value']
+    with _token_lock:
+        if _token_cache['value'] and _token_cache['expires_at'] > now:
+            return _token_cache['value']
 
     env_token = os.environ.get('GOOGLE_OAUTH_ACCESS_TOKEN')
     if env_token:
-        _token_cache['value'] = env_token
-        _token_cache['expires_at'] = now + 3300
+        with _token_lock:
+            _token_cache['value'] = env_token
+            _token_cache['expires_at'] = now + 3300
         return env_token
 
     metadata_url = 'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token'
     try:
         r = requests.get(metadata_url, headers={'Metadata-Flavor': 'Google'}, timeout=(1.5, 2.0))
         if not r.ok:
+            logger.warning("Metadata token fetch failed with status %s", r.status_code)
             return ''
         data = r.json()
         token = data.get('access_token', '')
         expires_in = max(30, int(data.get('expires_in', 300)) - 30)
-        _token_cache['value'] = token
-        _token_cache['expires_at'] = now + expires_in
+        with _token_lock:
+            _token_cache['value'] = token
+            _token_cache['expires_at'] = now + expires_in
         return token
     except Exception:
+        logger.exception("Failed to fetch access token from metadata server")
         return ''
 
 
@@ -81,20 +87,24 @@ def call_vertex(prompt):
     try:
         r = requests.post(endpoint, headers=headers, json=payload, timeout=(3, 30))
     except Exception:
+        logger.exception("call_vertex: request to Vertex AI failed")
         return ''
 
     if not r.ok:
+        logger.warning("call_vertex: Vertex AI returned status %s: %s", r.status_code, r.text[:200])
         return ''
 
     try:
         data = r.json()
         return data['candidates'][0]['content']['parts'][0]['text']
     except Exception:
+        logger.exception("call_vertex: failed to parse Vertex AI response")
         return ''
 
 
 # ─── ARKA PLANDA BLOG İÇERİĞİ ─────────────────────────────
 _cache = {"content": "", "last": 0}
+_cache_lock = threading.Lock()
 
 FALLBACK = """
 [VERGİ] Rideshare vergi formları Ocak sonu yayınlanır. 1099-K, 1099-NEC gerekli.
@@ -138,23 +148,27 @@ def _fetch_blog():
                 if len(text) > 100:
                     combined += text[:800] + "\n---\n"
         if combined:
-            _cache["content"] = combined[:6000]
-            _cache["last"] = time.time()
+            with _cache_lock:
+                _cache["content"] = combined[:6000]
+                _cache["last"] = time.time()
     except Exception:
-        logger.exception("Blog fetch failed; using fallback content")
-        _cache["content"] = FALLBACK
+        logger.exception("Blog fetch failed; keeping existing cache content")
+        with _cache_lock:
+            if not _cache["content"]:
+                _cache["content"] = FALLBACK
 
 def _bg_refresh():
     while True:
         _fetch_blog()
         time.sleep(3600)  # Her 1 saatte güncelle
 
-threading.Thread(target=_bg_refresh, daemon=True).start()
+_bg_started = False
+_bg_start_lock = threading.Lock()
 
 def get_context():
-    if not _cache["content"]:
-        return FALLBACK
-    return _cache["content"]
+    with _cache_lock:
+        content = _cache["content"]
+    return content if content else FALLBACK
 
 # ─── AI ─────────────────────────────────────────────
 def local_fallback_reply(user):
@@ -199,10 +213,12 @@ def llm(system, user):
         return local_fallback_reply(user)
     text = text.replace('**', '')
 
-    text = ''.join(c for c in text
-                   if (ord(c) < 128 or c in 'ğüşıöçĞÜŞİÖÇ' or
-                       0x1F600 <= ord(c) <= 0x1F64F or
-                       0x1F300 <= ord(c) <= 0x1F5FF))
+    # Strip only control characters (keep all printable Unicode including
+    # Turkish, emoji, currency symbols, arrows, etc.) and surrogate code points
+    text = ''.join(
+        c for c in text
+        if (ord(c) >= 0x20 or c in '\n\r\t') and not (0xD800 <= ord(c) <= 0xDFFF)
+    )
 
     return text.strip()
 
@@ -244,6 +260,65 @@ def handle_bad_request(error):
 def handle_unexpected_error(_error):
     logger.exception("Unhandled exception")
     return jsonify(error="İşlem sırasında bir hata oluştu."), 500
+
+
+# ─── RATE LIMITING ───────────────────────────────────────
+_rate_counters: dict = {}
+_rate_lock = threading.Lock()
+_RATE_MAX = 20
+_RATE_WINDOW = 60  # seconds
+
+
+def _is_rate_limited() -> bool:
+    ip = request.remote_addr or 'unknown'
+    now = time.time()
+    with _rate_lock:
+        dq = _rate_counters.setdefault(ip, deque())
+        while dq and now - dq[0] > _RATE_WINDOW:
+            dq.popleft()
+        if len(dq) >= _RATE_MAX:
+            return True
+        dq.append(now)
+        # Periodically evict fully-expired entries to bound memory usage
+        if len(_rate_counters) > 10000:
+            stale = [k for k, v in _rate_counters.items() if not v]
+            for k in stale:
+                del _rate_counters[k]
+        return False
+
+
+# ─── LIFECYCLE HOOKS ─────────────────────────────────────
+@app.before_request
+def _startup_hooks():
+    global _bg_started
+    if not _bg_started:
+        with _bg_start_lock:
+            if not _bg_started:
+                threading.Thread(target=_bg_refresh, daemon=True).start()
+                _bg_started = True
+
+    if request.method == 'POST':
+        # CSRF: validate Origin/Referer for browser-originated requests
+        origin = request.headers.get('Origin', '')
+        referer = request.headers.get('Referer', '')
+        if origin or referer:
+            check = origin or referer
+            try:
+                incoming_host = urlparse(check).hostname or ''
+            except Exception:
+                incoming_host = ''
+            request_host = (request.host or '').split(':')[0]
+            if incoming_host and incoming_host != request_host:
+                return jsonify(error='İzin verilmeyen kaynak.'), 403
+
+        # Rate limiting on API POST endpoints
+        _api_paths = {
+            '/vize', '/vergi', '/rideshare', '/ev', '/saglik', '/ehliyet',
+            '/ssn', '/banka', '/telefon', '/arac', '/wise', '/ucak',
+            '/sorgu', '/feedback',
+        }
+        if request.path in _api_paths and _is_rate_limited():
+            return jsonify(error='Çok fazla istek. Lütfen bir dakika sonra tekrar deneyin.'), 429
 
 
 # ─── HTML ─────────────────────────────────────────────
@@ -551,11 +626,22 @@ function show(tab,btn){
   if(btn) btn.classList.add('active');
 }
 function cp(id){
-  navigator.clipboard.writeText(document.getElementById(id).innerText).then(()=>{
-    const btn=document.querySelector('#'+id).parentNode.querySelector('.copy-btn');
-    btn.textContent='Kopyalandı!';
-    setTimeout(()=>btn.textContent='Kopyala',2000);
-  });
+  const el=document.getElementById(id);
+  const txt=el.innerText;
+  const btn=el.parentNode.querySelector('.copy-btn');
+  function _ok(){btn.textContent='Kopyalandı!';setTimeout(()=>btn.textContent='Kopyala',2000);}
+  if(navigator.clipboard && window.isSecureContext !== false){
+    navigator.clipboard.writeText(txt).then(_ok).catch(()=>_fallbackCopy(txt,_ok));
+  }else{
+    _fallbackCopy(txt,_ok);
+  }
+}
+function _fallbackCopy(txt,cb){
+  const ta=document.createElement('textarea');
+  ta.value=txt;ta.style.position='fixed';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');cb();}catch(e){}
+  document.body.removeChild(ta);
 }
 async function call(endpoint,data,outId,btnId,label){
   const out=document.getElementById(outId);
@@ -663,11 +749,7 @@ def index():
 def healthz():
     return jsonify(
         status='ok',
-        ai_provider='vertex_ai_gemini',
         vertex_configured=bool(GOOGLE_CLOUD_PROJECT and get_access_token()),
-        project=GOOGLE_CLOUD_PROJECT,
-        location=VERTEX_LOCATION,
-        model=GEMINI_MODEL
     )
 
 @app.route('/vize', methods=['POST'])
@@ -770,7 +852,7 @@ def do_ucak():
 
 @app.route('/sorgu', methods=['POST'])
 def do_sorgu():
-    d = require_json()
+    d = require_json(['soru'])
     return llm_json(
         "ABD’de yaşayan Türkler için pratik rehber uzmanısın. Cevapları sade, adım adım ve güvenli şekilde ver.",
         d.get('soru', '')
