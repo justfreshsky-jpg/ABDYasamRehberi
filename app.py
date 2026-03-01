@@ -80,7 +80,7 @@ def call_vertex(prompt):
     )
     payload = {
         'contents': [{'role': 'user', 'parts': [{'text': prompt}]}],
-        'generationConfig': {'maxOutputTokens': 2000, 'temperature': 0.6}
+        'generationConfig': {'maxOutputTokens': 8192, 'temperature': 0.6}
     }
     headers = {'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}
 
@@ -173,7 +173,7 @@ def get_context():
 # ─── AI ─────────────────────────────────────────────
 def local_fallback_reply(user):
     sample = "\n".join(
-        line for line in get_context().splitlines()
+        line for line in FALLBACK.splitlines()
         if line.strip() and line.strip() != "---"
     )
     sample = "\n".join(sample.splitlines()[:8])
