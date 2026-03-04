@@ -1,3 +1,4 @@
+import hashlib
 import logging
 from logging.handlers import RotatingFileHandler
 import os
@@ -8,6 +9,9 @@ import time
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from flask import Flask, request, jsonify, render_template_string
+from groq import Groq
+
+os.environ.setdefault('HTTPX_PROXIES', 'null')
 
 # ─── LOGGING ────────────────────────────────────────────────
 _log_dir = os.environ.get('LOG_DIR', 'logs')
@@ -30,8 +34,40 @@ app = Flask(__name__)
 GOOGLE_CLOUD_PROJECT = os.environ.get('GOOGLE_CLOUD_PROJECT') or os.environ.get('GCP_PROJECT')
 VERTEX_LOCATION = os.environ.get('VERTEX_LOCATION', 'us-central1')
 GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-1.5-flash')
+GROQ_KEY = os.environ.get('GROQ_KEY')
+_groq_client = Groq(api_key=GROQ_KEY) if GROQ_KEY else None
 _token_cache = {'value': '', 'expires_at': 0}
 _token_lock = threading.Lock()
+
+# ─── RESPONSE CACHE ──────────────────────────────────────
+_resp_cache: dict = {}
+_resp_cache_order: list = []
+_CACHE_MAX = 500
+_CACHE_TTL = 3600
+_resp_lock = threading.Lock()
+
+
+def _cache_get(key):
+    with _resp_lock:
+        if key in _resp_cache:
+            val, ts = _resp_cache[key]
+            if time.time() - ts < _CACHE_TTL:
+                return val
+            del _resp_cache[key]
+            try:
+                _resp_cache_order.remove(key)
+            except ValueError:
+                pass
+    return None
+
+
+def _cache_set(key, val):
+    with _resp_lock:
+        if len(_resp_cache) >= _CACHE_MAX and _resp_cache_order:
+            oldest = _resp_cache_order.pop(0)
+            _resp_cache.pop(oldest, None)
+        _resp_cache[key] = (val, time.time())
+        _resp_cache_order.append(key)
 
 
 def get_access_token():
@@ -100,6 +136,125 @@ def call_vertex(prompt):
     except Exception:
         logger.exception("call_vertex: failed to parse Vertex AI response")
         return ''
+
+
+# ─── LLM PROVIDERS ───────────────────────────────────────
+def _call_vertex_provider(system, user):
+    if not GOOGLE_CLOUD_PROJECT:
+        raise ValueError("GOOGLE_CLOUD_PROJECT not set")
+    text = call_vertex(f"{system}\n\nKullanıcı sorusu:\n{user}")
+    if not text:
+        raise RuntimeError("Vertex AI returned empty response")
+    return text.replace('**', '').strip()
+
+
+def _call_groq(system, user):
+    if not GROQ_KEY:
+        raise ValueError("GROQ_KEY not set")
+    completion = _groq_client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+        max_tokens=900,
+        temperature=0.6,
+        timeout=45,
+    )
+    return completion.choices[0].message.content.replace('**', '').strip()
+
+
+def _call_cerebras(system, user):
+    key = os.environ.get('CEREBRAS_KEY')
+    if not key:
+        raise ValueError("CEREBRAS_KEY not set")
+    r = requests.post(
+        "https://api.cerebras.ai/v1/chat/completions",
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+        json={"model": "llama-3.3-70b", "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}], "max_tokens": 900, "temperature": 0.6},
+        timeout=45,
+    )
+    r.raise_for_status()
+    return r.json()["choices"][0]["message"]["content"].replace('**', '').strip()
+
+
+def _call_gemini(system, user):
+    key = os.environ.get('GEMINI_KEY')
+    if not key:
+        raise ValueError("GEMINI_KEY not set")
+    r = requests.post(
+        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={key}",
+        headers={"Content-Type": "application/json"},
+        json={"contents": [{"parts": [{"text": system + "\n\n" + user}]}], "generationConfig": {"maxOutputTokens": 900, "temperature": 0.6}},
+        timeout=45,
+    )
+    r.raise_for_status()
+    return r.json()["candidates"][0]["content"]["parts"][0]["text"].replace('**', '').strip()
+
+
+def _call_cohere(system, user):
+    key = os.environ.get('COHERE_KEY')
+    if not key:
+        raise ValueError("COHERE_KEY not set")
+    r = requests.post(
+        "https://api.cohere.com/v2/chat",
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+        json={"model": "command-r-plus", "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}], "max_tokens": 900, "temperature": 0.6},
+        timeout=45,
+    )
+    r.raise_for_status()
+    return r.json()["message"]["content"][0]["text"].replace('**', '').strip()
+
+
+def _call_mistral(system, user):
+    key = os.environ.get('MISTRAL_KEY')
+    if not key:
+        raise ValueError("MISTRAL_KEY not set")
+    r = requests.post(
+        "https://api.mistral.ai/v1/chat/completions",
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+        json={"model": "mistral-small-latest", "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}], "max_tokens": 900, "temperature": 0.6},
+        timeout=45,
+    )
+    r.raise_for_status()
+    return r.json()["choices"][0]["message"]["content"].replace('**', '').strip()
+
+
+def _call_openrouter(system, user):
+    key = os.environ.get('OPENROUTER_KEY')
+    if not key:
+        raise ValueError("OPENROUTER_KEY not set")
+    r = requests.post(
+        "https://openrouter.ai/api/v1/chat/completions",
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+        json={"model": "meta-llama/llama-3.3-70b-instruct:free", "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}], "max_tokens": 900, "temperature": 0.6},
+        timeout=45,
+    )
+    r.raise_for_status()
+    return r.json()["choices"][0]["message"]["content"].replace('**', '').strip()
+
+
+def _call_huggingface(system, user):
+    key = os.environ.get('HF_KEY')
+    if not key:
+        raise ValueError("HF_KEY not set")
+    r = requests.post(
+        "https://router.hugging-face.cn/models/mistralai/Mistral-7B-Instruct-v0.3/v1/chat/completions",
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+        json={"model": "mistralai/Mistral-7B-Instruct-v0.3", "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}], "max_tokens": 900, "temperature": 0.6},
+        timeout=60,
+    )
+    r.raise_for_status()
+    return r.json()["choices"][0]["message"]["content"].replace('**', '').strip()
+
+
+_PROVIDERS = [
+    ("vertex", _call_vertex_provider),
+    ("groq", _call_groq),
+    ("cerebras", _call_cerebras),
+    ("gemini", _call_gemini),
+    ("cohere", _call_cohere),
+    ("mistral", _call_mistral),
+    ("openrouter", _call_openrouter),
+    ("huggingface", _call_huggingface),
+]
 
 
 # ─── ARKA PLANDA BLOG İÇERİĞİ ─────────────────────────────
@@ -188,9 +343,6 @@ def local_fallback_reply(user):
 
 
 def llm(system, user):
-    if not GOOGLE_CLOUD_PROJECT:
-        return local_fallback_reply(user)
-
     usa_prompt = """
     🇺🇸 SADECE ABD İLE İLGİLİ CEVAP VER
     ✅ ABD VİZE / SSN / BANK / EV / UBER / VERGİ / SAĞLIK
@@ -208,26 +360,33 @@ def llm(system, user):
 
     full_system = system + "\n\n" + usa_prompt + "\n\nReferans veri:\n" + get_context()
 
-    text = call_vertex(f"{full_system}\n\nKullanıcı sorusu:\n{user}")
-    if not text:
-        return local_fallback_reply(user)
-    text = text.replace('**', '')
+    cache_key = hashlib.md5((full_system + '||' + user).encode()).hexdigest()
+    cached = _cache_get(cache_key)
+    if cached:
+        return cached
 
-    # Strip only control characters (keep all printable Unicode including
-    # Turkish, emoji, currency symbols, arrows, etc.) and surrogate code points
-    text = ''.join(
-        c for c in text
-        if (ord(c) >= 0x20 or c in '\n\r\t') and not (0xD800 <= ord(c) <= 0xDFFF)
-    )
+    for name, fn in _PROVIDERS:
+        try:
+            text = fn(full_system, user)
+            if text:
+                text = ''.join(
+                    c for c in text
+                    if (ord(c) >= 0x20 or c in '\n\r\t') and not (0xD800 <= ord(c) <= 0xDFFF)
+                )
+                result = text.strip()
+                _cache_set(cache_key, result)
+                return result
+        except Exception as e:
+            logger.warning("Provider %s failed: %s", name, e)
 
-    return text.strip()
+    return "⚠️ Şu anda tüm AI servisleri geçici olarak kullanılamıyor. Lütfen birkaç dakika sonra tekrar deneyin."
 
 
 class BadRequestError(Exception):
     """İstek gövdesi beklenen formatta olmadığında fırlatılır."""
 
 
-_MAX_FIELD_LENGTH = 2000
+_MAX_FIELD_LENGTH = 4000
 
 
 def require_json(required_fields=None):
@@ -256,6 +415,11 @@ def handle_bad_request(error):
     return jsonify(error=str(error)), 400
 
 
+def _internal_error():
+    logger.exception("Unhandled route error")
+    return jsonify(error="İşlem sırasında bir hata oluştu."), 500
+
+
 @app.errorhandler(Exception)
 def handle_unexpected_error(_error):
     logger.exception("Unhandled exception")
@@ -265,26 +429,26 @@ def handle_unexpected_error(_error):
 # ─── RATE LIMITING ───────────────────────────────────────
 _rate_counters: dict = {}
 _rate_lock = threading.Lock()
-_RATE_MAX = 20
+_RATE_LIMIT = 20
 _RATE_WINDOW = 60  # seconds
 
 
-def _is_rate_limited() -> bool:
-    ip = request.remote_addr or 'unknown'
+def _check_rate_limit() -> bool:
+    ip = (request.access_route[0] if request.access_route else request.remote_addr) or 'unknown'
     now = time.time()
     with _rate_lock:
         dq = _rate_counters.setdefault(ip, deque())
         while dq and now - dq[0] > _RATE_WINDOW:
             dq.popleft()
-        if len(dq) >= _RATE_MAX:
-            return True
+        if len(dq) >= _RATE_LIMIT:
+            return False
         dq.append(now)
         # Periodically evict fully-expired entries to bound memory usage
         if len(_rate_counters) > 10000:
             stale = [k for k, v in _rate_counters.items() if not v]
             for k in stale:
                 del _rate_counters[k]
-        return False
+        return True
 
 
 # ─── LIFECYCLE HOOKS ─────────────────────────────────────
@@ -311,13 +475,7 @@ def _startup_hooks():
             if incoming_host and incoming_host != request_host:
                 return jsonify(error='İzin verilmeyen kaynak.'), 403
 
-        # Rate limiting on API POST endpoints
-        _api_paths = {
-            '/vize', '/vergi', '/rideshare', '/ev', '/saglik', '/ehliyet',
-            '/ssn', '/banka', '/telefon', '/arac', '/wise', '/ucak',
-            '/sorgu', '/feedback',
-        }
-        if request.path in _api_paths and _is_rate_limited():
+        if not _check_rate_limit():
             return jsonify(error='Çok fazla istek. Lütfen bir dakika sonra tekrar deneyin.'), 429
 
 
@@ -699,109 +857,174 @@ def healthz():
 
 @app.route('/vize', methods=['POST'])
 def do_vize():
-    d = require_json(["tip"])
-    return llm_json(
-        "ABD göçmenlik uzmanısın, Türkçe pratik rehber ver.",
-        f"{d['tip']} vizesi. State: {d.get('state','')}. Durum: {d.get('durum','')}. Belgeler, formlar, ücretler, hatalar, linkler."
-    )
+    try:
+        d = require_json(["tip"])
+        return llm_json(
+            "ABD göçmenlik uzmanısın, Türkçe pratik rehber ver.",
+            f"{d['tip']} vizesi. State: {d.get('state','')}. Durum: {d.get('durum','')}. Belgeler, formlar, ücretler, hatalar, linkler."
+        )
+    except BadRequestError:
+        raise
+    except Exception:
+        return _internal_error()
 
 @app.route('/vergi', methods=['POST'])
 def do_vergi():
-    d = require_json(["form"])
-    return llm_json(
-        "ABD vergi uzmanısın, Türkçe sade anlat.",
-        f"Form: {d['form']}. Kazanç: ${d.get('kazanc',0)}. Vize: {d.get('vize','')}. State: {d.get('state','')}. Doldurma rehberi, iade tahmini, deadline'lar."
-    )
+    try:
+        d = require_json(["form"])
+        return llm_json(
+            "ABD vergi uzmanısın, Türkçe sade anlat.",
+            f"Form: {d['form']}. Kazanç: ${d.get('kazanc',0)}. Vize: {d.get('vize','')}. State: {d.get('state','')}. Doldurma rehberi, iade tahmini, deadline'lar."
+        )
+    except BadRequestError:
+        raise
+    except Exception:
+        return _internal_error()
 
 @app.route('/rideshare', methods=['POST'])
 def do_rideshare():
-    d = require_json(["app"])
-    return llm_json(
-        "Rideshare ve gig economy uzmanısın, Türkçe yaz.",
-        f"{d['app']} - {d.get('state','')}. Konu: {d.get('konu','')}. Belgeler, kazanç, vergi, ipuçları."
-    )
+    try:
+        d = require_json(["app"])
+        return llm_json(
+            "Rideshare ve gig economy uzmanısın, Türkçe yaz.",
+            f"{d['app']} - {d.get('state','')}. Konu: {d.get('konu','')}. Belgeler, kazanç, vergi, ipuçları."
+        )
+    except BadRequestError:
+        raise
+    except Exception:
+        return _internal_error()
 
 @app.route('/ev', methods=['POST'])
 def do_ev():
-    d = require_json()
-    return llm_json(
-        "ABD emlak uzmanısın, Türkçe yaz.",
-        f"{d.get('sehir','')} ${d.get('butce','')} bütçe. Durum: {d.get('durum','')}. Siteler, belgeler, müzakere tüyoları."
-    )
+    try:
+        d = require_json()
+        return llm_json(
+            "ABD emlak uzmanısın, Türkçe yaz.",
+            f"{d.get('sehir','')} ${d.get('butce','')} bütçe. Durum: {d.get('durum','')}. Siteler, belgeler, müzakere tüyoları."
+        )
+    except BadRequestError:
+        raise
+    except Exception:
+        return _internal_error()
 
 @app.route('/saglik', methods=['POST'])
 def do_saglik():
-    d = require_json()
-    return llm_json(
-        "ABD sağlık sistemi uzmanısın, Türkçe pratik yaz.",
-        f"{d.get('state','')} - {d.get('durum','')}. Adresler, belgeler, Medicaid, ücretsiz klinikler."
-    )
+    try:
+        d = require_json()
+        return llm_json(
+            "ABD sağlık sistemi uzmanısın, Türkçe pratik yaz.",
+            f"{d.get('state','')} - {d.get('durum','')}. Adresler, belgeler, Medicaid, ücretsiz klinikler."
+        )
+    except BadRequestError:
+        raise
+    except Exception:
+        return _internal_error()
 
 @app.route('/ehliyet', methods=['POST'])
 def do_ehliyet():
-    d = require_json()
-    return llm_json(
-        "ABD DMV uzmanısın, Türkçe anlat.",
-        f"{d.get('state','')} ehliyet: {d.get('durum','')}. 6 Points belgeler, sınav, randevu, ücretler."
-    )
+    try:
+        d = require_json()
+        return llm_json(
+            "ABD DMV uzmanısın, Türkçe anlat.",
+            f"{d.get('state','')} ehliyet: {d.get('durum','')}. 6 Points belgeler, sınav, randevu, ücretler."
+        )
+    except BadRequestError:
+        raise
+    except Exception:
+        return _internal_error()
 
 @app.route('/ssn', methods=['POST'])
 def do_ssn():
-    d = require_json(["vize"])
-    return llm_json(
-        "ABD SSN uzmanısın. Türk göçmenler için Türkçe pratik rehber ver. NJ odaklı.",
-        f"Vize: {d['vize']}. State: {d.get('state','NJ')}. Durum: {d.get('durum','')}. "
-        "SSN için gerekli belgeler, başvuru adımları, NJ SSA ofis adresleri, "
-        "F-1/J-1 için CPT/OPT şartı, ITIN alternatifi, sık hatalar."
-    )
+    try:
+        d = require_json(["vize"])
+        return llm_json(
+            "ABD SSN uzmanısın. Türk göçmenler için Türkçe pratik rehber ver. NJ odaklı.",
+            f"Vize: {d['vize']}. State: {d.get('state','NJ')}. Durum: {d.get('durum','')}. "
+            "SSN için gerekli belgeler, başvuru adımları, NJ SSA ofis adresleri, "
+            "F-1/J-1 için CPT/OPT şartı, ITIN alternatifi, sık hatalar."
+        )
+    except BadRequestError:
+        raise
+    except Exception:
+        return _internal_error()
 
 @app.route('/banka', methods=['POST'])
 def do_banka():
-    d = require_json()
-    return llm_json(
-        "ABD bankacılık uzmanısın, Türkçe yaz.",
-        f"Konu: {d.get('durum','')}. Hangi banka, belgeler, credit score, secured card."
-    )
+    try:
+        d = require_json()
+        return llm_json(
+            "ABD bankacılık uzmanısın, Türkçe yaz.",
+            f"Konu: {d.get('durum','')}. Hangi banka, belgeler, credit score, secured card."
+        )
+    except BadRequestError:
+        raise
+    except Exception:
+        return _internal_error()
 
 @app.route('/telefon', methods=['POST'])
 def do_telefon():
-    d = require_json()
-    return llm_json(
-        "ABD telekomünikasyon uzmanısın, Türkçe rehber.",
-        f"Konu: {d.get('konu','')}. Adım adım kurulum, fiyatlar, alternatifler."
-    )
+    try:
+        d = require_json()
+        return llm_json(
+            "ABD telekomünikasyon uzmanısın, Türkçe rehber.",
+            f"Konu: {d.get('konu','')}. Adım adım kurulum, fiyatlar, alternatifler."
+        )
+    except BadRequestError:
+        raise
+    except Exception:
+        return _internal_error()
 
 @app.route('/arac', methods=['POST'])
 def do_arac():
-    d = require_json()
-    return llm_json(
-        "ABD otomotiv uzmanısın, Türkçe yaz.",
-        f"{d.get('state','')} - {d.get('konu','')}. Belgeler, sigorta, fiyat, CarMax/Carvana."
-    )
+    try:
+        d = require_json()
+        return llm_json(
+            "ABD otomotiv uzmanısın, Türkçe yaz.",
+            f"{d.get('state','')} - {d.get('konu','')}. Belgeler, sigorta, fiyat, CarMax/Carvana."
+        )
+    except BadRequestError:
+        raise
+    except Exception:
+        return _internal_error()
 
 @app.route('/wise', methods=['POST'])
 def do_wise():
-    d = require_json()
-    return llm_json(
-        "Para transferi uzmanısın, Türkçe anlat.",
-        f"Konu: {d.get('konu','')}. Adımlar, komisyonlar, limitler, alternatifler."
-    )
+    try:
+        d = require_json()
+        return llm_json(
+            "Para transferi uzmanısın, Türkçe anlat.",
+            f"Konu: {d.get('konu','')}. Adımlar, komisyonlar, limitler, alternatifler."
+        )
+    except BadRequestError:
+        raise
+    except Exception:
+        return _internal_error()
 
 @app.route('/ucak', methods=['POST'])
 def do_ucak():
-    d = require_json()
-    return llm_json(
-        "Havacılık uzmanısın, Türkçe pratik rehber.",
-        f"{d.get('havayolu','')} - {d.get('konu','')}. Detaylı bilgi, ücretler, ipuçları."
-    )
+    try:
+        d = require_json()
+        return llm_json(
+            "Havacılık uzmanısın, Türkçe pratik rehber.",
+            f"{d.get('havayolu','')} - {d.get('konu','')}. Detaylı bilgi, ücretler, ipuçları."
+        )
+    except BadRequestError:
+        raise
+    except Exception:
+        return _internal_error()
 
 @app.route('/sorgu', methods=['POST'])
 def do_sorgu():
-    d = require_json(['soru'])
-    return llm_json(
-        "ABD’de yaşayan Türkler için pratik rehber uzmanısın. Cevapları sade, adım adım ve güvenli şekilde ver.",
-        d.get('soru', '')
-    )
+    try:
+        d = require_json(['soru'])
+        return llm_json(
+            "ABD'de yaşayan Türkler için pratik rehber uzmanısın. Cevapları sade, adım adım ve güvenli şekilde ver.",
+            d.get('soru', '')
+        )
+    except BadRequestError:
+        raise
+    except Exception:
+        return _internal_error()
 
 
 _feedback_store = deque(maxlen=500)
@@ -809,13 +1032,18 @@ _feedback_store = deque(maxlen=500)
 
 @app.route('/feedback', methods=['POST'])
 def do_feedback():
-    d = require_json(['mesaj'])
-    _feedback_store.append({
-        'mesaj': d.get('mesaj', '').strip(),
-        'iletisim': d.get('iletisim', '').strip(),
-        'ts': int(time.time())
-    })
-    return jsonify(result='Teşekkürler! Geri bildirimin alındı ve iyileştirme listesine eklendi.', total_feedback=len(_feedback_store))
+    try:
+        d = require_json(['mesaj'])
+        _feedback_store.append({
+            'mesaj': d.get('mesaj', '').strip(),
+            'iletisim': d.get('iletisim', '').strip(),
+            'ts': int(time.time())
+        })
+        return jsonify(result='Teşekkürler! Geri bildirimin alındı ve iyileştirme listesine eklendi.', total_feedback=len(_feedback_store))
+    except BadRequestError:
+        raise
+    except Exception:
+        return _internal_error()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
