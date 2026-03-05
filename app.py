@@ -428,21 +428,17 @@ textarea{resize:vertical;min-height:90px}
 .output-wrap:hover .copy-btn{opacity:1}
 .spinner{display:inline-block;width:16px;height:16px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
-.trust-row{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0 10px}.trust-chip{background:#fff;border:1px solid #dbeafe;color:#1e3a8a;padding:8px 12px;border-radius:999px;font-size:.82em;font-weight:600}.goal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:8px 0 18px}.goal-card{background:#fff;border:2px solid #e2e8f0;border-radius:12px;padding:12px;cursor:pointer;transition:.2s}.goal-card:hover{border-color:#3b82f6;transform:translateY(-2px)}.goal-card h4{font-size:.95em;color:#1e3a8a;margin-bottom:4px}.goal-card p{font-size:.8em;color:#64748b}.hero-cta{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:14px}.hero-cta button{background:#fff;color:#1e3a8a;border:none;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer}.footer{text-align:center;padding:32px 20px;color:#64748b;font-size:.88em;line-height:2;background:#fff;margin-top:20px;border-radius:16px}
+.trust-row{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0 10px}.trust-chip{background:#fff;border:1px solid #dbeafe;color:#1e3a8a;padding:8px 12px;border-radius:999px;font-size:.82em;font-weight:600}.goal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:8px 0 18px}.goal-card{background:#fff;border:2px solid #e2e8f0;border-radius:12px;padding:12px;cursor:pointer;transition:.2s}.goal-card:hover{border-color:#3b82f6;transform:translateY(-2px)}.goal-card h4{font-size:.95em;color:#1e3a8a;margin-bottom:4px}.goal-card p{font-size:.8em;color:#64748b}.hero-desc{font-size:1em;opacity:.85;max-width:620px;margin:0 auto 18px;line-height:1.6}.footer{text-align:center;padding:32px 20px;color:#64748b;font-size:.88em;line-height:2;background:#fff;margin-top:20px;border-radius:16px}
 </style>
 </head>
 <body>
 <div class="hero">
   <h1 id="siteTitle" style="cursor:pointer">🇺🇸 ABD Yaşam Rehberi</h1>
+  <p class="hero-desc">Amerika'daki Türkler için yapay zeka destekli rehber — vize, SSN, vergi, ev, sağlık ve daha fazlası hakkında Türkçe, adım adım yardım alın.</p>
   <div class="steps">
     <span class="step">1️⃣ Konu Seç</span>
     <span class="step">2️⃣ Bilgini Gir</span>
     <span class="step">3️⃣ Kontrol Listeni Al</span>
-  </div>
-  <div class="hero-cta">
-    <button data-quickstart="ssn">SSN ile Başla</button>
-    <button data-quickstart="vize">Vize Planı</button>
-    <button data-quickstart="sorgu">Hızlı Soru Sor</button>
   </div>
 </div>
 <div class="container">
@@ -626,7 +622,7 @@ textarea{resize:vertical;min-height:90px}
 
   <div id="feedback" class="tab"><div class="card">
     <h2><i class="fas fa-comment-dots"></i> Geri Bildirim</h2>
-    <p>Görüş ve önerileriniz için: <a href="mailto:admin@amerikarehbersitesi.com">admin@amerikarehbersitesi.com</a></p>
+    <p>Görüş ve önerileriniz için: <a href="mailto:admin@abdyasamrehberi.com">admin@abdyasamrehberi.com</a></p>
 </div></div>
 
 </div>
