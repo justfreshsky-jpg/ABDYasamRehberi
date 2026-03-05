@@ -71,7 +71,7 @@ def _call_groq(system, user):
     completion = _groq_client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
-        max_tokens=900,
+        max_tokens=1200,
         temperature=0.6,
         timeout=45,
     )
@@ -85,7 +85,7 @@ def _call_cerebras(system, user):
     r = requests.post(
         "https://api.cerebras.ai/v1/chat/completions",
         headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-        json={"model": "llama-3.3-70b", "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}], "max_tokens": 900, "temperature": 0.6},
+        json={"model": "llama-3.3-70b", "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}], "max_tokens": 1200, "temperature": 0.6},
         timeout=45,
     )
     r.raise_for_status()
@@ -99,7 +99,7 @@ def _call_gemini(system, user):
     r = requests.post(
         f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={key}",
         headers={"Content-Type": "application/json"},
-        json={"contents": [{"parts": [{"text": system + "\n\n" + user}]}], "generationConfig": {"maxOutputTokens": 900, "temperature": 0.6}},
+        json={"contents": [{"parts": [{"text": system + "\n\n" + user}]}], "generationConfig": {"maxOutputTokens": 1200, "temperature": 0.6}},
         timeout=45,
     )
     r.raise_for_status()
@@ -113,7 +113,7 @@ def _call_cohere(system, user):
     r = requests.post(
         "https://api.cohere.com/v2/chat",
         headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-        json={"model": "command-r-plus", "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}], "max_tokens": 900, "temperature": 0.6},
+        json={"model": "command-r-plus", "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}], "max_tokens": 1200, "temperature": 0.6},
         timeout=45,
     )
     r.raise_for_status()
@@ -127,7 +127,7 @@ def _call_mistral(system, user):
     r = requests.post(
         "https://api.mistral.ai/v1/chat/completions",
         headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-        json={"model": "mistral-small-latest", "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}], "max_tokens": 900, "temperature": 0.6},
+        json={"model": "mistral-small-latest", "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}], "max_tokens": 1200, "temperature": 0.6},
         timeout=45,
     )
     r.raise_for_status()
@@ -141,7 +141,7 @@ def _call_openrouter(system, user):
     r = requests.post(
         "https://openrouter.ai/api/v1/chat/completions",
         headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-        json={"model": "meta-llama/llama-3.3-70b-instruct:free", "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}], "max_tokens": 900, "temperature": 0.6},
+        json={"model": "meta-llama/llama-3.3-70b-instruct:free", "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}], "max_tokens": 1200, "temperature": 0.6},
         timeout=45,
     )
     r.raise_for_status()
@@ -155,7 +155,7 @@ def _call_huggingface(system, user):
     r = requests.post(
         "https://router.hugging-face.cn/models/mistralai/Mistral-7B-Instruct-v0.3/v1/chat/completions",
         headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-        json={"model": "mistralai/Mistral-7B-Instruct-v0.3", "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}], "max_tokens": 900, "temperature": 0.6},
+        json={"model": "mistralai/Mistral-7B-Instruct-v0.3", "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}], "max_tokens": 1200, "temperature": 0.6},
         timeout=60,
     )
     r.raise_for_status()
@@ -244,19 +244,15 @@ def get_context():
 # ─── AI ─────────────────────────────────────────────
 def llm(system, user):
     usa_prompt = """
-    🇺🇸 SADECE ABD İLE İLGİLİ CEVAP VER
-    ✅ ABD VİZE / SSN / BANK / EV / UBER / VERGİ / SAĞLIK
-    • Her adıma emoji koy: ✅ 🚀 💰 📱 🏠 🪪 ✈️ 🏥 💳
-    • ÖNEMLİ kelimeleri YÜKSEK HARF
-    • Kısa paragraf, uzun liste
-    • ÇIKTI ŞABLONU KULLAN:
-      1) Hızlı Özet (3 madde)
-      2) Adım Adım Kontrol Listesi
-      3) Sık Hata / Riskler
-      4) Resmi Linkler (varsa)
-      5) Sonraki Adım (tek net öneri)
-    ⚠️ SADECE ABD / NJ / NY!
-    """
+SADECE ABD İLE İLGİLİ CEVAP VER. Türkçe, sade ve düzenli yaz.
+ÇIKTI ŞABLONU:
+1) Özet (2-3 madde)
+2) Adımlar (numaralı liste)
+3) Önemli Notlar (varsa)
+4) Resmi Linkler (varsa)
+Kısa tut. Gereksiz tekrar yapma. Emoji kullanabilirsin ama abartma.
+SADECE ABD / NJ / NY konuları.
+"""
 
     full_system = system + "\n\n" + usa_prompt + "\n\nReferans veri:\n" + get_context()
 
@@ -438,7 +434,6 @@ textarea{resize:vertical;min-height:90px}
 <body>
 <div class="hero">
   <h1 id="siteTitle" style="cursor:pointer">🇺🇸 ABD Yaşam Rehberi</h1>
-  <p>ABD'de ilk 30 gün için kişisel yol haritanı 2-3 dakikada oluştur.</p>
   <div class="steps">
     <span class="step">1️⃣ Konu Seç</span>
     <span class="step">2️⃣ Bilgini Gir</span>
@@ -451,20 +446,6 @@ textarea{resize:vertical;min-height:90px}
   </div>
 </div>
 <div class="container">
-  <div class="trust-row">
-    <span class="trust-chip">🔐 Kişisel veri saklanmaz</span>
-    <span class="trust-chip">🧭 Adım adım kontrol listesi</span>
-    <span class="trust-chip">🗓 Güncelleme: 2026</span>
-  </div>
-  <div class="hint" style="margin-top:8px">
-    🍎 <strong>Kullanım ipucu:</strong> Önce bir hedef kartı seç, sonra kendi durumuna göre rehber üret.
-  </div>
-  <div class="goal-grid">
-    <div class="goal-card" data-quickstart="ssn"><h4>SSN Başvurusu</h4><p>Belgeler + ofis adımları</p></div>
-    <div class="goal-card" data-quickstart="banka"><h4>Banka Hesabı</h4><p>SSN yoksa seçenekler</p></div>
-    <div class="goal-card" data-quickstart="ev"><h4>Ev Kiralama</h4><p>Bütçe + sözleşme kontrolü</p></div>
-    <div class="goal-card" data-quickstart="vergi"><h4>Vergi Rehberi</h4><p>Form + son tarih özeti</p></div>
-  </div>
   <div class="tabs" id="topicTabs">
     <button class="active" role="tab" aria-selected="true" data-tab="vize"><i class="fas fa-passport"></i>Vize</button>
     <button role="tab" aria-selected="false" data-tab="vergi"><i class="fas fa-calculator"></i>Vergi</button>
@@ -491,7 +472,7 @@ textarea{resize:vertical;min-height:90px}
     </div>
     <div class="field"><label for="v3">Özel Durum</label><input id="v3" maxlength="2000" placeholder="örn. İlk başvuru, uzatma, reddedildim"></div>
     <button class="btn" id="vb" onclick="call('/vize',{tip:g('v1'),state:g('v2'),durum:g('v3')},'vo','vb','Kişisel Vize Planı Oluştur')">Kişisel Vize Planı Oluştur</button>
-    <div class="output-wrap"><div id="vo" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('vo')">Kopyala</button></div>
+    <div class="output-wrap"><div id="vo" class="output"></div><button class="copy-btn" onclick="cp('vo')">Kopyala</button></div>
   </div></div>
 
   <div id="vergi" class="tab"><div class="card">
@@ -506,7 +487,7 @@ textarea{resize:vertical;min-height:90px}
       <div class="field"><label for="t4">State</label><input id="t4" maxlength="2000" placeholder="New Jersey"></div>
     </div>
     <button class="btn" id="tb" onclick="call('/vergi',{form:g('t1'),kazanc:g('t2'),vize:g('t3'),state:g('t4')},'to','tb','Vergi Kontrol Listesi Oluştur')">Vergi Kontrol Listesi Oluştur</button>
-    <div class="output-wrap"><div id="to" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('to')">Kopyala</button></div>
+    <div class="output-wrap"><div id="to" class="output"></div><button class="copy-btn" onclick="cp('to')">Kopyala</button></div>
   </div></div>
 
   <div id="rideshare" class="tab"><div class="card">
@@ -518,7 +499,7 @@ textarea{resize:vertical;min-height:90px}
     </div>
     <div class="field"><label for="r3">Konu</label><select id="r3"><option>Nasıl başlarım?</option><option>1099 formu / vergi</option><option>Haftada ne kadar kazanırım?</option><option>Masraf düşümü (deduction)</option></select></div>
     <button class="btn" id="rb" onclick="call('/rideshare',{app:g('r1'),state:g('r2'),konu:g('r3')},'ro','rb','Rideshare Rehberi')">Planı Oluştur</button>
-    <div class="output-wrap"><div id="ro" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('ro')">Kopyala</button></div>
+    <div class="output-wrap"><div id="ro" class="output"></div><button class="copy-btn" onclick="cp('ro')">Kopyala</button></div>
   </div></div>
 
   <div id="ev" class="tab"><div class="card">
@@ -530,7 +511,7 @@ textarea{resize:vertical;min-height:90px}
     </div>
     <div class="field"><label for="e3">Özel Durum</label><input id="e3" maxlength="2000" placeholder="örn. SSN yok, kredi skoru yok, evcil hayvan var"></div>
     <button class="btn" id="eb" onclick="call('/ev',{sehir:g('e1'),butce:g('e2'),durum:g('e3')},'eo','eb','Ev Bulma Rehberi')">Planı Oluştur</button>
-    <div class="output-wrap"><div id="eo" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('eo')">Kopyala</button></div>
+    <div class="output-wrap"><div id="eo" class="output"></div><button class="copy-btn" onclick="cp('eo')">Kopyala</button></div>
   </div></div>
 
   <div id="saglik" class="tab"><div class="card">
@@ -541,7 +522,7 @@ textarea{resize:vertical;min-height:90px}
       <div class="field"><label for="h2">Durum</label><select id="h2"><option>Sigorta yok, nasıl alırım?</option><option>Medicaid nasıl başvururum?</option><option>Ücretsiz klinik nerede?</option><option>SSN olmadan sigorta olur mu?</option></select></div>
     </div>
     <button class="btn" id="hb" onclick="call('/saglik',{state:g('h1'),durum:g('h2')},'ho','hb','Sağlık Rehberi')">Rehber Oluştur</button>
-    <div class="output-wrap"><div id="ho" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('ho')">Kopyala</button></div>
+    <div class="output-wrap"><div id="ho" class="output"></div><button class="copy-btn" onclick="cp('ho')">Kopyala</button></div>
   </div></div>
 
   <div id="ehliyet" class="tab"><div class="card">
@@ -552,7 +533,7 @@ textarea{resize:vertical;min-height:90px}
       <div class="field"><label for="l2">Durum</label><select id="l2"><option>İlk kez alıyorum</option><option>Türk ehliyetimi çevirmek istiyorum</option><option>SSN / ITIN yok</option><option>Real ID lazım</option></select></div>
     </div>
     <button class="btn" id="lb" onclick="call('/ehliyet',{state:g('l1'),durum:g('l2')},'lo','lb','Ehliyet Rehberi')">Rehber Oluştur</button>
-    <div class="output-wrap"><div id="lo" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('lo')">Kopyala</button></div>
+    <div class="output-wrap"><div id="lo" class="output"></div><button class="copy-btn" onclick="cp('lo')">Kopyala</button></div>
   </div></div>
 
 <div id="ssn" class="tab">
@@ -582,7 +563,7 @@ textarea{resize:vertical;min-height:90px}
     </div>
     <button class="btn" id="ssb" onclick="call('/ssn',{vize:g('ss1'),state:g('ss2'),durum:g('ss3')},'sso','ssb','SSN Rehberi Oluştur')">SSN Rehberi Oluştur</button>
     <div class="output-wrap">
-      <div id="sso" class="output">Sonuç burada çıkacak...</div>
+      <div id="sso" class="output"></div>
       <button class="copy-btn" onclick="cp('sso')">Kopyala</button>
     </div>
   </div>
@@ -593,7 +574,7 @@ textarea{resize:vertical;min-height:90px}
     <div class="hint">💳 <strong>İpucu:</strong> Chase/BofA pasaportla açılıyor. Secured card ile kredi skoru başlatılır.</div>
     <div class="field"><label for="ba1">Durum</label><select id="ba1"><option>SSN olmadan banka açmak istiyorum</option><option>Kredi kartı almak istiyorum</option><option>Credit score sıfırdan nasıl yaparım?</option><option>En iyi ücretsiz banka hangisi?</option></select></div>
     <button class="btn" id="bb" onclick="call('/banka',{durum:g('ba1')},'bo','bb','Banka Rehberi')">Rehber Oluştur</button>
-    <div class="output-wrap"><div id="bo" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('bo')">Kopyala</button></div>
+    <div class="output-wrap"><div id="bo" class="output"></div><button class="copy-btn" onclick="cp('bo')">Kopyala</button></div>
   </div></div>
 
   <div id="telefon" class="tab"><div class="card">
@@ -601,7 +582,7 @@ textarea{resize:vertical;min-height:90px}
     <div class="hint">📱 <strong>İpucu:</strong> Google Voice ile SSN olmadan ücretsiz Amerikan numarası alabilirsin.</div>
     <div class="field"><label for="p1">Konu</label><select id="p1"><option>Ücretsiz numara (Google Voice)</option><option>Ucuz hat (Mint, Visible, T-Mobile)</option><option>SSN olmadan kontrat hat</option><option>Türkiye'yi ucuz arama</option></select></div>
     <button class="btn" id="pb" onclick="call('/telefon',{konu:g('p1')},'po','pb','Telefon Rehberi')">Rehber Oluştur</button>
-    <div class="output-wrap"><div id="po" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('po')">Kopyala</button></div>
+    <div class="output-wrap"><div id="po" class="output"></div><button class="copy-btn" onclick="cp('po')">Kopyala</button></div>
   </div></div>
 
   <div id="arac" class="tab"><div class="card">
@@ -612,7 +593,7 @@ textarea{resize:vertical;min-height:90px}
       <div class="field"><label for="ar2">Konu</label><select id="ar2"><option>İkinci el araç almak istiyorum</option><option>Araç kiralamak istiyorum</option><option>Araç sigortası almak istiyorum</option><option>SSN olmadan araç alınır mı?</option></select></div>
     </div>
     <button class="btn" id="arb" onclick="call('/arac',{state:g('ar1'),konu:g('ar2')},'aro','arb','Araç Rehberi')">Rehber Oluştur</button>
-    <div class="output-wrap"><div id="aro" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('aro')">Kopyala</button></div>
+    <div class="output-wrap"><div id="aro" class="output"></div><button class="copy-btn" onclick="cp('aro')">Kopyala</button></div>
   </div></div>
 
   <div id="wise" class="tab"><div class="card">
@@ -620,7 +601,7 @@ textarea{resize:vertical;min-height:90px}
     <div class="hint">💸 <strong>İpucu:</strong> Wise ile TL/$ kurunu en düşük komisyonla gönder.</div>
     <div class="field"><label for="w1">Konu</label><select id="w1"><option>Wise ile Türkiye'ye para gönderme</option><option>Wise limitleri ve ücretleri</option><option>Zelle nasıl kullanılır?</option><option>Venmo / CashApp rehberi</option></select></div>
     <button class="btn" id="wb" onclick="call('/wise',{konu:g('w1')},'wo','wb','Para Transfer Rehberi')">Rehber Oluştur</button>
-    <div class="output-wrap"><div id="wo" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('wo')">Kopyala</button></div>
+    <div class="output-wrap"><div id="wo" class="output"></div><button class="copy-btn" onclick="cp('wo')">Kopyala</button></div>
   </div></div>
 
   <div id="ucak" class="tab"><div class="card">
@@ -631,7 +612,7 @@ textarea{resize:vertical;min-height:90px}
       <div class="field"><label for="u2">Konu</label><select id="u2"><option>Bagaj ücretleri ve kurallar</option><option>En ucuz bilet nasıl bulunur?</option><option>Check-in rehberi</option><option>Refund / iptal kuralları</option></select></div>
     </div>
     <button class="btn" id="ub" onclick="call('/ucak',{havayolu:g('u1'),konu:g('u2')},'uo','ub','Uçak Rehberi')">Rehber Oluştur</button>
-    <div class="output-wrap"><div id="uo" class="output">Sonuç burada çıkacak...</div><button class="copy-btn" onclick="cp('uo')">Kopyala</button></div>
+    <div class="output-wrap"><div id="uo" class="output"></div><button class="copy-btn" onclick="cp('uo')">Kopyala</button></div>
   </div></div>
 
   <div id="sorgu" class="tab"><div class="card">
@@ -639,18 +620,14 @@ textarea{resize:vertical;min-height:90px}
     <div class="hint">🤖 ABD hayatıyla ilgili aklına takılan her şeyi sor. Türkçe cevap gelir.</div>
     <div class="field"><label for="q1">Sorun nedir?</label><textarea id="q1" rows="4" maxlength="2000" placeholder="örn. SSN olmadan iş bulabilir miyim? İlk ay ne yapmalıyım?"></textarea></div>
     <button class="btn" id="qb" onclick="call('/sorgu',{soru:g('q1')},'qo','qb','Cevapla')">Cevapla</button>
-    <div class="output-wrap"><div id="qo" class="output">Cevap burada çıkacak...</div><button class="copy-btn" onclick="cp('qo')">Kopyala</button></div>
+    <div class="output-wrap"><div id="qo" class="output"></div><button class="copy-btn" onclick="cp('qo')">Kopyala</button></div>
   </div></div>
 
 
   <div id="feedback" class="tab"><div class="card">
-    <h2><i class="fas fa-comment-dots"></i> Site Geri Bildirimi</h2>
-    <div class="hint">💬 Deneyimini paylaş: ne işe yaradı, ne eksik, neyi geliştirelim?</div>
-    <div class="field"><label for="fb1">Mesajın</label><textarea id="fb1" rows="4" maxlength="2000" placeholder="Örn. Tab geçişleri daha hızlı olabilir, çıktı PDF olsun, daha fazla resmi link eklenebilir..."></textarea></div>
-    <div class="field"><label for="fb2">İsteğe bağlı e-posta</label><input id="fb2" maxlength="2000" placeholder="name@example.com"></div>
-    <button class="btn" id="fbb" onclick="sendFeedback()">Geri Bildirimi Gönder</button>
-    <div class="output-wrap"><div id="fbo" class="output">Geri bildirim durum mesajı burada görünecek...</div></div>
-  </div></div>
+    <h2><i class="fas fa-comment-dots"></i> Geri Bildirim</h2>
+    <p>Görüş ve önerileriniz için: <a href="mailto:admin@amerikarehbersitesi.com">admin@amerikarehbersitesi.com</a></p>
+</div></div>
 
 </div>
 <div class="footer">
@@ -714,8 +691,8 @@ async function call(endpoint,data,outId,btnId,label){
   const out=document.getElementById(outId);
   const btn=document.getElementById(btnId);
   btn.disabled=true;
-  btn.innerHTML='<span class=\"spinner\"></span>Adım 1/3: Bilgi hazırlanıyor';
-  out.textContent='Adım 2/3: Yanıt hazırlanıyor...';
+  btn.innerHTML='<span class=\"spinner\"></span>Yükleniyor...';
+  out.textContent='';
   try{
     const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
     const j=await r.json().catch(()=>({}));
@@ -723,28 +700,12 @@ async function call(endpoint,data,outId,btnId,label){
       out.textContent='Hata: '+(j.error || 'İstek işlenemedi.');
       return;
     }
-    out.textContent='Adım 3/3: Sonuç hazır ✅\\n\\n'+(j.result || 'Sonuç üretilemedi.');
+    out.textContent=(j.result || 'Sonuç üretilemedi.');
   }catch(e){
     out.textContent='Bağlantı hatası: '+e.message;
   }finally{
     btn.disabled=false;
     btn.textContent=label;
-  }
-}
-
-async function sendFeedback(){
-  const out=document.getElementById('fbo');
-  const btn=document.getElementById('fbb');
-  btn.disabled=true;
-  out.textContent='Gönderiliyor...';
-  try{
-    const r=await fetch('/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mesaj:g('fb1'),iletisim:g('fb2')})});
-    const j=await r.json().catch(()=>({}));
-    out.textContent=r.ok ? (j.result || 'Teşekkürler!') : ('Hata: '+(j.error || 'Gönderilemedi'));
-  }catch(e){
-    out.textContent='Bağlantı hatası: '+e.message;
-  }finally{
-    btn.disabled=false;
   }
 }
 
