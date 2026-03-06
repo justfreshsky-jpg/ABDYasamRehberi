@@ -8,7 +8,7 @@ import threading
 import time
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
-from flask import Flask, request, jsonify, render_template_string
+from flask import Flask, request, jsonify, make_response
 from groq import Groq
 
 os.environ.setdefault('HTTPX_PROXIES', 'null')
@@ -765,7 +765,9 @@ document.addEventListener('DOMContentLoaded',function(){
 # ─── ROUTES ──────────────────────────────────────────
 @app.route('/')
 def index():
-    return render_template_string(HTML)
+    response = make_response(HTML)
+    response.headers['Content-Type'] = 'text/html; charset=utf-8'
+    return response
 
 
 @app.route('/healthz')
