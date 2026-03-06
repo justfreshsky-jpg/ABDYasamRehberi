@@ -244,14 +244,18 @@ def get_context():
 # ─── AI ─────────────────────────────────────────────
 def llm(system, user):
     usa_prompt = """
-SADECE ABD İLE İLGİLİ CEVAP VER. Türkçe, sade ve düzenli yaz.
-ÇIKTI ŞABLONU:
-1) Özet (2-3 madde)
-2) Adımlar (numaralı liste)
-3) Önemli Notlar (varsa)
-4) Resmi Linkler (varsa)
-Kısa tut. Gereksiz tekrar yapma. Emoji kullanabilirsin ama abartma.
-SADECE ABD / NJ / NY konuları.
+🇺🇸 SADECE ABD İLE İLGİLİ KONULARA CEVAP VER
+✅ ABD VİZE / SSN / BANKA / EV / UBER / VERGİ / SAĞLIK
+• Her adıma emoji ekle: ✅ 🚀 💰 📱 🏠 🪪 ✈️ 🏥 💳
+• ÖNEMLİ KELİMELERİ BÜYÜK YAZ
+• Kısa paragraflar, uzun listeler
+• ÇIKTI ŞABLONU:
+  1) Hızlı Özet (3 madde)
+  2) Adım Adım Kontrol Listesi
+  3) Sık Yapılan Hatalar / Riskler
+  4) Resmi Linkler (varsa)
+  5) Sonraki Adım (tek net öneri)
+⚠️ SADECE ABD / NJ / NY konuları!
 """
 
     full_system = system + "\n\n" + usa_prompt + "\n\nReferans veri:\n" + get_context()
@@ -428,6 +432,8 @@ textarea{resize:vertical;min-height:90px}
 .output-wrap:hover .copy-btn{opacity:1}
 .spinner{display:inline-block;width:16px;height:16px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
+.output.loading{color:#94a3b8;font-style:italic}
+.output.error{color:#ef4444}
 .trust-row{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0 10px}.trust-chip{background:#fff;border:1px solid #dbeafe;color:#1e3a8a;padding:8px 12px;border-radius:999px;font-size:.82em;font-weight:600}.goal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:8px 0 18px}.goal-card{background:#fff;border:2px solid #e2e8f0;border-radius:12px;padding:12px;cursor:pointer;transition:.2s}.goal-card:hover{border-color:#3b82f6;transform:translateY(-2px)}.goal-card h4{font-size:.95em;color:#1e3a8a;margin-bottom:4px}.goal-card p{font-size:.8em;color:#64748b}.hero-desc{font-size:1em;opacity:.85;max-width:620px;margin:0 auto 18px;line-height:1.6}.footer{text-align:center;padding:32px 20px;color:#64748b;font-size:.88em;line-height:2;background:#fff;margin-top:20px;border-radius:16px}
 </style>
 </head>
@@ -468,7 +474,7 @@ textarea{resize:vertical;min-height:90px}
     </div>
     <div class="field"><label for="v3">Özel Durum</label><input id="v3" maxlength="2000" placeholder="örn. İlk başvuru, uzatma, reddedildim"></div>
     <button class="btn" id="vb" onclick="call('/vize',{tip:g('v1'),state:g('v2'),durum:g('v3')},'vo','vb','Kişisel Vize Planı Oluştur')">Kişisel Vize Planı Oluştur</button>
-    <div class="output-wrap"><div id="vo" class="output"></div><button class="copy-btn" onclick="cp('vo')">Kopyala</button></div>
+    <div class="output-wrap"><div id="vo" class="output">Sonuç burada görünecek...</div><button class="copy-btn" onclick="cp('vo')">Kopyala</button></div>
   </div></div>
 
   <div id="vergi" class="tab"><div class="card">
@@ -483,7 +489,7 @@ textarea{resize:vertical;min-height:90px}
       <div class="field"><label for="t4">State</label><input id="t4" maxlength="2000" placeholder="New Jersey"></div>
     </div>
     <button class="btn" id="tb" onclick="call('/vergi',{form:g('t1'),kazanc:g('t2'),vize:g('t3'),state:g('t4')},'to','tb','Vergi Kontrol Listesi Oluştur')">Vergi Kontrol Listesi Oluştur</button>
-    <div class="output-wrap"><div id="to" class="output"></div><button class="copy-btn" onclick="cp('to')">Kopyala</button></div>
+    <div class="output-wrap"><div id="to" class="output">Sonuç burada görünecek...</div><button class="copy-btn" onclick="cp('to')">Kopyala</button></div>
   </div></div>
 
   <div id="rideshare" class="tab"><div class="card">
@@ -495,7 +501,7 @@ textarea{resize:vertical;min-height:90px}
     </div>
     <div class="field"><label for="r3">Konu</label><select id="r3"><option>Nasıl başlarım?</option><option>1099 formu / vergi</option><option>Haftada ne kadar kazanırım?</option><option>Masraf düşümü (deduction)</option></select></div>
     <button class="btn" id="rb" onclick="call('/rideshare',{app:g('r1'),state:g('r2'),konu:g('r3')},'ro','rb','Rideshare Rehberi')">Planı Oluştur</button>
-    <div class="output-wrap"><div id="ro" class="output"></div><button class="copy-btn" onclick="cp('ro')">Kopyala</button></div>
+    <div class="output-wrap"><div id="ro" class="output">Sonuç burada görünecek...</div><button class="copy-btn" onclick="cp('ro')">Kopyala</button></div>
   </div></div>
 
   <div id="ev" class="tab"><div class="card">
@@ -507,7 +513,7 @@ textarea{resize:vertical;min-height:90px}
     </div>
     <div class="field"><label for="e3">Özel Durum</label><input id="e3" maxlength="2000" placeholder="örn. SSN yok, kredi skoru yok, evcil hayvan var"></div>
     <button class="btn" id="eb" onclick="call('/ev',{sehir:g('e1'),butce:g('e2'),durum:g('e3')},'eo','eb','Ev Bulma Rehberi')">Planı Oluştur</button>
-    <div class="output-wrap"><div id="eo" class="output"></div><button class="copy-btn" onclick="cp('eo')">Kopyala</button></div>
+    <div class="output-wrap"><div id="eo" class="output">Sonuç burada görünecek...</div><button class="copy-btn" onclick="cp('eo')">Kopyala</button></div>
   </div></div>
 
   <div id="saglik" class="tab"><div class="card">
@@ -518,7 +524,7 @@ textarea{resize:vertical;min-height:90px}
       <div class="field"><label for="h2">Durum</label><select id="h2"><option>Sigorta yok, nasıl alırım?</option><option>Medicaid nasıl başvururum?</option><option>Ücretsiz klinik nerede?</option><option>SSN olmadan sigorta olur mu?</option></select></div>
     </div>
     <button class="btn" id="hb" onclick="call('/saglik',{state:g('h1'),durum:g('h2')},'ho','hb','Sağlık Rehberi')">Rehber Oluştur</button>
-    <div class="output-wrap"><div id="ho" class="output"></div><button class="copy-btn" onclick="cp('ho')">Kopyala</button></div>
+    <div class="output-wrap"><div id="ho" class="output">Sonuç burada görünecek...</div><button class="copy-btn" onclick="cp('ho')">Kopyala</button></div>
   </div></div>
 
   <div id="ehliyet" class="tab"><div class="card">
@@ -529,7 +535,7 @@ textarea{resize:vertical;min-height:90px}
       <div class="field"><label for="l2">Durum</label><select id="l2"><option>İlk kez alıyorum</option><option>Türk ehliyetimi çevirmek istiyorum</option><option>SSN / ITIN yok</option><option>Real ID lazım</option></select></div>
     </div>
     <button class="btn" id="lb" onclick="call('/ehliyet',{state:g('l1'),durum:g('l2')},'lo','lb','Ehliyet Rehberi')">Rehber Oluştur</button>
-    <div class="output-wrap"><div id="lo" class="output"></div><button class="copy-btn" onclick="cp('lo')">Kopyala</button></div>
+    <div class="output-wrap"><div id="lo" class="output">Sonuç burada görünecek...</div><button class="copy-btn" onclick="cp('lo')">Kopyala</button></div>
   </div></div>
 
 <div id="ssn" class="tab">
@@ -559,7 +565,7 @@ textarea{resize:vertical;min-height:90px}
     </div>
     <button class="btn" id="ssb" onclick="call('/ssn',{vize:g('ss1'),state:g('ss2'),durum:g('ss3')},'sso','ssb','SSN Rehberi Oluştur')">SSN Rehberi Oluştur</button>
     <div class="output-wrap">
-      <div id="sso" class="output"></div>
+      <div id="sso" class="output">Sonuç burada görünecek...</div>
       <button class="copy-btn" onclick="cp('sso')">Kopyala</button>
     </div>
   </div>
@@ -570,7 +576,7 @@ textarea{resize:vertical;min-height:90px}
     <div class="hint">💳 <strong>İpucu:</strong> Chase/BofA pasaportla açılıyor. Secured card ile kredi skoru başlatılır.</div>
     <div class="field"><label for="ba1">Durum</label><select id="ba1"><option>SSN olmadan banka açmak istiyorum</option><option>Kredi kartı almak istiyorum</option><option>Credit score sıfırdan nasıl yaparım?</option><option>En iyi ücretsiz banka hangisi?</option></select></div>
     <button class="btn" id="bb" onclick="call('/banka',{durum:g('ba1')},'bo','bb','Banka Rehberi')">Rehber Oluştur</button>
-    <div class="output-wrap"><div id="bo" class="output"></div><button class="copy-btn" onclick="cp('bo')">Kopyala</button></div>
+    <div class="output-wrap"><div id="bo" class="output">Sonuç burada görünecek...</div><button class="copy-btn" onclick="cp('bo')">Kopyala</button></div>
   </div></div>
 
   <div id="telefon" class="tab"><div class="card">
@@ -578,7 +584,7 @@ textarea{resize:vertical;min-height:90px}
     <div class="hint">📱 <strong>İpucu:</strong> Google Voice ile SSN olmadan ücretsiz Amerikan numarası alabilirsin.</div>
     <div class="field"><label for="p1">Konu</label><select id="p1"><option>Ücretsiz numara (Google Voice)</option><option>Ucuz hat (Mint, Visible, T-Mobile)</option><option>SSN olmadan kontrat hat</option><option>Türkiye'yi ucuz arama</option></select></div>
     <button class="btn" id="pb" onclick="call('/telefon',{konu:g('p1')},'po','pb','Telefon Rehberi')">Rehber Oluştur</button>
-    <div class="output-wrap"><div id="po" class="output"></div><button class="copy-btn" onclick="cp('po')">Kopyala</button></div>
+    <div class="output-wrap"><div id="po" class="output">Sonuç burada görünecek...</div><button class="copy-btn" onclick="cp('po')">Kopyala</button></div>
   </div></div>
 
   <div id="arac" class="tab"><div class="card">
@@ -589,7 +595,7 @@ textarea{resize:vertical;min-height:90px}
       <div class="field"><label for="ar2">Konu</label><select id="ar2"><option>İkinci el araç almak istiyorum</option><option>Araç kiralamak istiyorum</option><option>Araç sigortası almak istiyorum</option><option>SSN olmadan araç alınır mı?</option></select></div>
     </div>
     <button class="btn" id="arb" onclick="call('/arac',{state:g('ar1'),konu:g('ar2')},'aro','arb','Araç Rehberi')">Rehber Oluştur</button>
-    <div class="output-wrap"><div id="aro" class="output"></div><button class="copy-btn" onclick="cp('aro')">Kopyala</button></div>
+    <div class="output-wrap"><div id="aro" class="output">Sonuç burada görünecek...</div><button class="copy-btn" onclick="cp('aro')">Kopyala</button></div>
   </div></div>
 
   <div id="wise" class="tab"><div class="card">
@@ -597,7 +603,7 @@ textarea{resize:vertical;min-height:90px}
     <div class="hint">💸 <strong>İpucu:</strong> Wise ile TL/$ kurunu en düşük komisyonla gönder.</div>
     <div class="field"><label for="w1">Konu</label><select id="w1"><option>Wise ile Türkiye'ye para gönderme</option><option>Wise limitleri ve ücretleri</option><option>Zelle nasıl kullanılır?</option><option>Venmo / CashApp rehberi</option></select></div>
     <button class="btn" id="wb" onclick="call('/wise',{konu:g('w1')},'wo','wb','Para Transfer Rehberi')">Rehber Oluştur</button>
-    <div class="output-wrap"><div id="wo" class="output"></div><button class="copy-btn" onclick="cp('wo')">Kopyala</button></div>
+    <div class="output-wrap"><div id="wo" class="output">Sonuç burada görünecek...</div><button class="copy-btn" onclick="cp('wo')">Kopyala</button></div>
   </div></div>
 
   <div id="ucak" class="tab"><div class="card">
@@ -608,7 +614,7 @@ textarea{resize:vertical;min-height:90px}
       <div class="field"><label for="u2">Konu</label><select id="u2"><option>Bagaj ücretleri ve kurallar</option><option>En ucuz bilet nasıl bulunur?</option><option>Check-in rehberi</option><option>Refund / iptal kuralları</option></select></div>
     </div>
     <button class="btn" id="ub" onclick="call('/ucak',{havayolu:g('u1'),konu:g('u2')},'uo','ub','Uçak Rehberi')">Rehber Oluştur</button>
-    <div class="output-wrap"><div id="uo" class="output"></div><button class="copy-btn" onclick="cp('uo')">Kopyala</button></div>
+    <div class="output-wrap"><div id="uo" class="output">Sonuç burada görünecek...</div><button class="copy-btn" onclick="cp('uo')">Kopyala</button></div>
   </div></div>
 
   <div id="sorgu" class="tab"><div class="card">
@@ -616,7 +622,7 @@ textarea{resize:vertical;min-height:90px}
     <div class="hint">🤖 ABD hayatıyla ilgili aklına takılan her şeyi sor. Türkçe cevap gelir.</div>
     <div class="field"><label for="q1">Sorun nedir?</label><textarea id="q1" rows="4" maxlength="2000" placeholder="örn. SSN olmadan iş bulabilir miyim? İlk ay ne yapmalıyım?"></textarea></div>
     <button class="btn" id="qb" onclick="call('/sorgu',{soru:g('q1')},'qo','qb','Cevapla')">Cevapla</button>
-    <div class="output-wrap"><div id="qo" class="output"></div><button class="copy-btn" onclick="cp('qo')">Kopyala</button></div>
+    <div class="output-wrap"><div id="qo" class="output">Sonuç burada görünecek...</div><button class="copy-btn" onclick="cp('qo')">Kopyala</button></div>
   </div></div>
 
 
@@ -682,21 +688,54 @@ function _fallbackCopy(txt,cb){
   try{document.execCommand('copy');cb();}catch(e){}
   document.body.removeChild(ta);
 }
+function formatResult(text){
+  function escape(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+  const paragraphs=text.split(/\n{2,}/);
+  return paragraphs.map(para=>{
+    const lines=para.split('\n').filter(l=>l.trim());
+    if(!lines.length) return '';
+    const isOrdered=lines.every(l=>/^\d+\.\s/.test(l.trim()));
+    const isBullet=lines.every(l=>/^[-•]\s/.test(l.trim()));
+    if(isOrdered){
+      const items=lines.map(l=>'<li>'+escape(l.trim().replace(/^\d+\.\s/,''))+'</li>').join('');
+      return '<ol>'+items+'</ol>';
+    }
+    if(isBullet){
+      const items=lines.map(l=>'<li>'+escape(l.trim().replace(/^[-•]\s/,''))+'</li>').join('');
+      return '<ul>'+items+'</ul>';
+    }
+    return lines.map(l=>{
+      const t=l.trim();
+      if(!t) return '';
+      if(/^[A-ZÇĞİÖŞÜ][^a-zçğışöüa-z]{3,}$/.test(t)||(/[:\uFF1A]$/.test(t)&&t.length<80)){
+        return '<p><strong>'+escape(t)+'</strong></p>';
+      }
+      return '<p>'+escape(t)+'</p>';
+    }).join('');
+  }).join('');
+}
 async function call(endpoint,data,outId,btnId,label){
   const out=document.getElementById(outId);
   const btn=document.getElementById(btnId);
   btn.disabled=true;
   btn.innerHTML='<span class=\"spinner\"></span>Yükleniyor...';
-  out.textContent='';
+  out.classList.add('loading');
+  out.textContent='Rehberiniz oluşturuluyor...';
   try{
     const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
     const j=await r.json().catch(()=>({}));
     if(!r.ok){
+      out.classList.remove('loading');
+      out.classList.add('error');
       out.textContent='Hata: '+(j.error || 'İstek işlenemedi.');
       return;
     }
-    out.textContent=(j.result || 'Sonuç üretilemedi.');
+    out.classList.remove('loading');
+    out.innerHTML=formatResult(j.result || 'Sonuç üretilemedi.');
+    out.scrollIntoView({behavior:'smooth',block:'nearest'});
   }catch(e){
+    out.classList.remove('loading');
+    out.classList.add('error');
     out.textContent='Bağlantı hatası: '+e.message;
   }finally{
     btn.disabled=false;
