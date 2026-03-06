@@ -418,6 +418,7 @@ textarea{resize:vertical;min-height:90px}
 .output{background:#f8fafc;border:2px solid #e2e8f0;border-radius:12px;padding:20px;min-height:100px;white-space:pre-wrap;font-size:14px;line-height:1.75}
 .copy-btn{position:absolute;top:10px;right:10px;background:#10b981;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;opacity:0;transition:opacity .2s}
 .output-wrap:hover .copy-btn{opacity:1}
+@media(hover:none){.copy-btn{opacity:1}}
 .spinner{display:inline-block;width:16px;height:16px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .output.loading{color:#94a3b8;font-style:italic}
@@ -751,21 +752,20 @@ function quickStart(tab){
 }
 
 document.addEventListener('DOMContentLoaded',function(){
-  document.querySelectorAll('.tabs button[data-tab]').forEach(function(btn){
+  document.querySelectorAll('[data-tab]').forEach(function(btn){
     btn.addEventListener('click',function(){show(btn.dataset.tab,btn);});
   });
-  document.addEventListener('click',function(e){
-    var btn=e.target.closest('[data-action]');
-    if(btn){
-      var action=btn.dataset.action;
-      var fn=ACTION_MAP[action];
+  document.querySelectorAll('[data-quickstart]').forEach(function(el){
+    el.addEventListener('click',function(){quickStart(el.dataset.quickstart);});
+  });
+  document.querySelectorAll('[data-copy-target]').forEach(function(btn){
+    btn.addEventListener('click',function(){cp(btn.dataset.copyTarget);});
+  });
+  document.querySelectorAll('[data-action]').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var fn=ACTION_MAP[btn.dataset.action];
       if(fn){var args=fn();call(args[0],args[1],args[2],args[3],args[4]);}
-      return;
-    }
-    var copyBtn=e.target.closest('.copy-btn[data-copy-target]');
-    if(copyBtn){cp(copyBtn.dataset.copyTarget);return;}
-    var qs=e.target.closest('[data-quickstart]');
-    if(qs){quickStart(qs.dataset.quickstart);return;}
+    });
   });
   var h1=document.getElementById('siteTitle');
   if(h1) h1.addEventListener('click',function(){
@@ -988,6 +988,13 @@ def do_feedback():
         raise
     except Exception:
         return _internal_error()
+
+# Start background blog refresh thread eagerly (for gunicorn compatibility)
+if not _bg_started:
+    with _bg_start_lock:
+        if not _bg_started:
+            threading.Thread(target=_bg_refresh, daemon=True).start()
+            _bg_started = True
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
