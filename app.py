@@ -405,7 +405,7 @@ body{font-family:Segoe UI,Arial,sans-serif;background:#f0f4ff;color:#1e293b}
 .feat h3{font-size:1em;margin-bottom:4px}
 .feat p{font-size:.82em;color:#64748b}
 .container{max-width:900px;margin:0 auto;padding:20px}
-.tabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:8px;margin:24px 0}
+.tabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:8px;margin:24px 0;position:relative;z-index:10}
 .tabs button{background:#fff;border:2px solid #e2e8f0;padding:12px 8px;border-radius:12px;cursor:pointer;font-size:12px;font-weight:600;color:#1e293b;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:4px;min-height:44px}
 .tabs button i{font-size:1.4em;color:#3b82f6}
 .tabs button.active{background:#1e3a8a;color:#fff;border-color:#3b82f6}
@@ -451,20 +451,20 @@ textarea{resize:vertical;min-height:90px}
 </div>
 <div class="container">
   <div class="tabs" id="topicTabs">
-    <button class="active" role="tab" aria-selected="true" data-tab="vize"><i class="fas fa-passport"></i>Vize</button>
-    <button role="tab" aria-selected="false" data-tab="vergi"><i class="fas fa-calculator"></i>Vergi</button>
-    <button role="tab" aria-selected="false" data-tab="rideshare"><i class="fas fa-car"></i>İş (Rideshare)</button>
-    <button role="tab" aria-selected="false" data-tab="ev"><i class="fas fa-home"></i>Ev Bulma</button>
-    <button role="tab" aria-selected="false" data-tab="saglik"><i class="fas fa-heartbeat"></i>Sağlık</button>
-    <button role="tab" aria-selected="false" data-tab="ehliyet"><i class="fas fa-id-card"></i>Ehliyet</button>
-    <button role="tab" aria-selected="false" data-tab="ssn"><i class="fas fa-id-card-alt"></i>SSN</button>
-    <button role="tab" aria-selected="false" data-tab="banka"><i class="fas fa-university"></i>Banka</button>
-    <button role="tab" aria-selected="false" data-tab="telefon"><i class="fas fa-phone"></i>Telefon</button>
-    <button role="tab" aria-selected="false" data-tab="arac"><i class="fas fa-car-side"></i>Araç Bulma</button>
-    <button role="tab" aria-selected="false" data-tab="wise"><i class="fas fa-exchange-alt"></i>Para Transferi</button>
-    <button role="tab" aria-selected="false" data-tab="ucak"><i class="fas fa-plane"></i>Uçak</button>
-    <button role="tab" aria-selected="false" data-tab="sorgu"><i class="fas fa-question-circle"></i>Soru Sor</button>
-    <button role="tab" aria-selected="false" data-tab="feedback"><i class="fas fa-comment-dots"></i>Geri Bildirim</button>
+    <button class="active" role="tab" aria-selected="true" data-tab="vize" onclick="show('vize',this)"><i class="fas fa-passport"></i>Vize</button>
+    <button role="tab" aria-selected="false" data-tab="vergi" onclick="show('vergi',this)"><i class="fas fa-calculator"></i>Vergi</button>
+    <button role="tab" aria-selected="false" data-tab="rideshare" onclick="show('rideshare',this)"><i class="fas fa-car"></i>İş (Rideshare)</button>
+    <button role="tab" aria-selected="false" data-tab="ev" onclick="show('ev',this)"><i class="fas fa-home"></i>Ev Bulma</button>
+    <button role="tab" aria-selected="false" data-tab="saglik" onclick="show('saglik',this)"><i class="fas fa-heartbeat"></i>Sağlık</button>
+    <button role="tab" aria-selected="false" data-tab="ehliyet" onclick="show('ehliyet',this)"><i class="fas fa-id-card"></i>Ehliyet</button>
+    <button role="tab" aria-selected="false" data-tab="ssn" onclick="show('ssn',this)"><i class="fas fa-id-card-alt"></i>SSN</button>
+    <button role="tab" aria-selected="false" data-tab="banka" onclick="show('banka',this)"><i class="fas fa-university"></i>Banka</button>
+    <button role="tab" aria-selected="false" data-tab="telefon" onclick="show('telefon',this)"><i class="fas fa-phone"></i>Telefon</button>
+    <button role="tab" aria-selected="false" data-tab="arac" onclick="show('arac',this)"><i class="fas fa-car-side"></i>Araç Bulma</button>
+    <button role="tab" aria-selected="false" data-tab="wise" onclick="show('wise',this)"><i class="fas fa-exchange-alt"></i>Para Transferi</button>
+    <button role="tab" aria-selected="false" data-tab="ucak" onclick="show('ucak',this)"><i class="fas fa-plane"></i>Uçak</button>
+    <button role="tab" aria-selected="false" data-tab="sorgu" onclick="show('sorgu',this)"><i class="fas fa-question-circle"></i>Soru Sor</button>
+    <button role="tab" aria-selected="false" data-tab="feedback" onclick="show('feedback',this)"><i class="fas fa-comment-dots"></i>Geri Bildirim</button>
   </div>
 
   <div id="vize" class="tab active"><div class="card">
