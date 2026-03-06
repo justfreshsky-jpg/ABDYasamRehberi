@@ -393,13 +393,13 @@ body{font-family:Segoe UI,Arial,sans-serif;background:#f0f4ff;color:#1e293b}
 .feat p{font-size:.82em;color:#64748b}
 .container{max-width:900px;margin:0 auto;padding:20px}
 .tabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:8px;margin:24px 0;position:relative;z-index:10}
-.tabs button{background:#fff;border:2px solid #e2e8f0;padding:12px 8px;border-radius:12px;cursor:pointer;font-size:12px;font-weight:600;color:#1e293b;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:4px;min-height:44px}
+.tabs button{background:#fff;border:2px solid #e2e8f0;padding:12px 8px;border-radius:12px;cursor:pointer;font-size:12px;font-weight:600;color:#1e293b;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:4px;min-height:44px;position:relative;z-index:1}
 .tabs button i{font-size:1.4em;color:#3b82f6}
 .tabs button.active{background:#1e3a8a;color:#fff;border-color:#3b82f6}
 .tabs button.active i{color:#fff}
 .tabs button:hover:not(.active){background:#f0f4ff;transform:translateY(-2px)}
 .tab{display:none}
-.tab.active{display:block;animation:fadeIn .4s}
+.tab.active{display:block;animation:fadeIn .4s;position:relative;z-index:1}
 @keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 .card{background:#fff;border-radius:16px;padding:28px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
 .card h2{color:#1e3a8a;font-size:1.5em;margin-bottom:12px;display:flex;align-items:center;gap:10px}
