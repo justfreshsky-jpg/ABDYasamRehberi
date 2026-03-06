@@ -6,7 +6,6 @@ from collections import deque, OrderedDict
 import requests
 import threading
 import time
-from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from flask import Flask, request, jsonify, make_response
 from groq import Groq
@@ -364,21 +363,6 @@ def _startup_hooks():
                 _bg_started = True
 
     if request.method == 'POST':
-        # CSRF: validate Origin/Referer for browser-originated requests
-        origin = request.headers.get('Origin', '')
-        referer = request.headers.get('Referer', '')
-        if origin or referer:
-            check = origin or referer
-            try:
-                incoming_host = urlparse(check).hostname or ''
-            except Exception:
-                incoming_host = ''
-            request_host = (request.host or '').split(':')[0]
-            forwarded_host = (request.headers.get('X-Forwarded-Host', '') or '').split(':')[0]
-            allowed_hosts = {h for h in [request_host, forwarded_host] if h}
-            if incoming_host and incoming_host not in allowed_hosts:
-                return jsonify(error='İzin verilmeyen kaynak.'), 403
-
         if not _check_rate_limit():
             return jsonify(error='Çok fazla istek. Lütfen bir dakika sonra tekrar deneyin.'), 429
 
