@@ -406,7 +406,7 @@ body{font-family:Segoe UI,Arial,sans-serif;background:#f0f4ff;color:#1e293b}
 .feat p{font-size:.82em;color:#64748b}
 .container{max-width:900px;margin:0 auto;padding:20px}
 .tabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:8px;margin:24px 0}
-.tabs button{background:#fff;border:2px solid #e2e8f0;padding:12px 8px;border-radius:12px;cursor:pointer;font-size:12px;font-weight:600;color:#1e293b;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:4px}
+.tabs button{background:#fff;border:2px solid #e2e8f0;padding:12px 8px;border-radius:12px;cursor:pointer;font-size:12px;font-weight:600;color:#1e293b;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:4px;min-height:44px}
 .tabs button i{font-size:1.4em;color:#3b82f6}
 .tabs button.active{background:#1e3a8a;color:#fff;border-color:#3b82f6}
 .tabs button.active i{color:#fff}
@@ -424,7 +424,7 @@ label{font-weight:600;font-size:.9em;color:#334155}
 input,select,textarea{padding:12px 14px;border:2px solid #e2e8f0;border-radius:10px;font-size:15px;transition:border .2s;background:#fafbfc;width:100%}
 input:focus,select:focus,textarea:focus{border-color:#3b82f6;outline:none;background:#fff}
 textarea{resize:vertical;min-height:90px}
-.btn{background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:#fff;border:none;padding:14px;width:100%;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin:16px 0 8px;box-shadow:0 4px 15px rgba(30,64,175,.3);transition:all .2s}
+.btn{background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:#fff;border:none;padding:14px;width:100%;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin:16px 0 8px;box-shadow:0 4px 15px rgba(30,64,175,.3);transition:all .2s;position:relative;z-index:1}
 .btn:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(30,64,175,.4)}
 .btn:disabled{opacity:.65;cursor:not-allowed;transform:none}
 .output-wrap{position:relative;margin-top:8px}
