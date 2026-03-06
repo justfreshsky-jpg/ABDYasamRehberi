@@ -380,11 +380,11 @@ HTML = """<!DOCTYPE html>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Segoe UI,Arial,sans-serif;background:#f0f4ff;color:#1e293b}
-.hero{background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:#fff;padding:40px 20px;text-align:center}
+.hero{background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:#fff;padding:40px 20px;text-align:center;isolation:isolate}
 .hero h1{font-size:2.2em;font-weight:800;margin-bottom:10px}
 .hero p{font-size:1.1em;opacity:.9;max-width:600px;margin:0 auto 16px}
-.steps{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;margin-top:12px}
-.step{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:6px 16px;font-size:.9em}
+.steps{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;margin-top:12px;pointer-events:none}
+.step{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:6px 16px;font-size:.9em;pointer-events:none}
 .features{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;max-width:1000px;margin:30px auto;padding:0 20px}
 .feat{background:#fff;border-radius:14px;padding:20px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.08);border-top:4px solid #3b82f6;transition:transform .3s}
 .feat:hover{transform:translateY(-6px)}
