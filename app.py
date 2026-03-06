@@ -374,7 +374,9 @@ def _startup_hooks():
             except Exception:
                 incoming_host = ''
             request_host = (request.host or '').split(':')[0]
-            if incoming_host and incoming_host != request_host:
+            forwarded_host = (request.headers.get('X-Forwarded-Host', '') or '').split(':')[0]
+            allowed_hosts = {h for h in [request_host, forwarded_host] if h}
+            if incoming_host and incoming_host not in allowed_hosts:
                 return jsonify(error='İzin verilmeyen kaynak.'), 403
 
         if not _check_rate_limit():
