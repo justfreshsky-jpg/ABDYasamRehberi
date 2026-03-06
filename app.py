@@ -363,6 +363,7 @@ def _startup_hooks():
                 _bg_started = True
 
     if request.method == 'POST':
+        # No CSRF check: app is stateless (no cookies/sessions), rate limiting provides abuse protection.
         if not _check_rate_limit():
             return jsonify(error='Çok fazla istek. Lütfen bir dakika sonra tekrar deneyin.'), 429
 
