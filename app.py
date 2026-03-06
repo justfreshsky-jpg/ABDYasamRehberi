@@ -63,6 +63,16 @@ def _cache_set(key, val):
             _resp_cache[key] = (val, time.time())
 
 
+def _sanitize(text: str) -> str:
+    """Remove surrogate characters and other non-UTF-8-safe codepoints."""
+    if not isinstance(text, str):
+        return ''
+    return ''.join(
+        c for c in text
+        if (ord(c) >= 0x20 or c in '\n\r\t') and not (0xD800 <= ord(c) <= 0xDFFF)
+    )
+
+
 # ─── LLM PROVIDERS ───────────────────────────────────────
 def _call_groq(system, user):
     if not GROQ_KEY:
@@ -216,10 +226,10 @@ def _fetch_blog():
             for p in posts[:15]:
                 text = p.get_text(separator=" ", strip=True)
                 if len(text) > 100:
-                    combined += text[:800] + "\n---\n"
+                    combined += _sanitize(text[:800]) + "\n---\n"
         if combined:
             with _cache_lock:
-                _cache["content"] = combined[:6000]
+                _cache["content"] = _sanitize(combined[:6000])
                 _cache["last"] = time.time()
     except Exception:
         logger.exception("Blog fetch failed; keeping existing cache content")
@@ -262,17 +272,13 @@ def llm(system, user):
     cache_key = hashlib.md5((system + '||' + user).encode()).hexdigest()
     cached = _cache_get(cache_key)
     if cached:
-        return cached
+        return _sanitize(cached)
 
     for name, fn in _PROVIDERS:
         try:
             text = fn(full_system, user)
             if text:
-                text = ''.join(
-                    c for c in text
-                    if (ord(c) >= 0x20 or c in '\n\r\t') and not (0xD800 <= ord(c) <= 0xDFFF)
-                )
-                result = text.strip()
+                result = _sanitize(text).strip()
                 _cache_set(cache_key, result)
                 return result
         except Exception as e:
@@ -302,11 +308,12 @@ def require_json(required_fields=None):
         if isinstance(value, str) and len(value) > _MAX_FIELD_LENGTH:
             raise BadRequestError(f"İstek alanı maksimum uzunluğu ({_MAX_FIELD_LENGTH} karakter) aşıyor.")
 
-    return data
+    # Sanitize all string fields to remove surrogate characters
+    return {k: (_sanitize(v) if isinstance(v, str) else v) for k, v in data.items()}
 
 
 def llm_json(system_prompt, user_prompt):
-    return jsonify(result=llm(system_prompt, user_prompt))
+    return jsonify(result=_sanitize(llm(system_prompt, user_prompt)))
 
 
 @app.errorhandler(BadRequestError)
