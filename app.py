@@ -434,7 +434,7 @@ textarea{resize:vertical;min-height:90px}
 <body>
 <div class="hero">
   <h1 id="siteTitle" style="cursor:pointer">🇺🇸 ABD Yaşam Rehberi</h1>
-  <p class="hero-desc">Amerika'daki Türkler için yapay zeka destekli rehber — vize, SSN, vergi, ev, sağlık ve daha fazlası hakkında Türkçe, adım adım yardım alın.</p>
+  <p class="hero-desc">Amerika’ya yeni gelenler için yapay zeka destekli rehber — vize, SSN, vergi, ev, sağlık ve daha fazlası hakkında adım adım destek. Hiçbir kişisel veri saklanmaz.</p>
   <div class="steps">
     <span class="step">1️⃣ Konu Seç</span>
     <span class="step">2️⃣ Bilgini Gir</span>
