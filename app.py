@@ -389,6 +389,7 @@ HTML = """<!DOCTYPE html>
 <title>ABD Yaşam Rehberi</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%AD%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Segoe UI,Arial,sans-serif;background:#f0f4ff;color:#1e293b}
@@ -434,6 +435,7 @@ textarea{resize:vertical;min-height:90px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .output.loading{color:#94a3b8;font-style:italic}
 .output.error{color:#ef4444}
+.btn i,.tabs button i{pointer-events:none}
 .trust-row{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0 10px}.trust-chip{background:#fff;border:1px solid #dbeafe;color:#1e3a8a;padding:8px 12px;border-radius:999px;font-size:.82em;font-weight:600}.goal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:8px 0 18px}.goal-card{background:#fff;border:2px solid #e2e8f0;border-radius:12px;padding:12px;cursor:pointer;transition:.2s}.goal-card:hover{border-color:#3b82f6;transform:translateY(-2px)}.goal-card h4{font-size:.95em;color:#1e3a8a;margin-bottom:4px}.goal-card p{font-size:.8em;color:#64748b}.hero-desc{font-size:1em;opacity:.85;max-width:620px;margin:0 auto 18px;line-height:1.6}.footer{text-align:center;padding:32px 20px;color:#64748b;font-size:.88em;line-height:2;background:#fff;margin-top:20px;border-radius:16px}
 </style>
 </head>
