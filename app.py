@@ -438,20 +438,20 @@ textarea{resize:vertical;min-height:90px}
 </div>
 <div class="container">
   <div class="tabs" id="topicTabs">
-    <button class="active" role="tab" aria-selected="true" data-tab="vize" onclick="show('vize',this)"><i class="fas fa-passport"></i>Vize</button>
-    <button role="tab" aria-selected="false" data-tab="vergi" onclick="show('vergi',this)"><i class="fas fa-calculator"></i>Vergi</button>
-    <button role="tab" aria-selected="false" data-tab="rideshare" onclick="show('rideshare',this)"><i class="fas fa-car"></i>İş (Rideshare)</button>
-    <button role="tab" aria-selected="false" data-tab="ev" onclick="show('ev',this)"><i class="fas fa-home"></i>Ev Bulma</button>
-    <button role="tab" aria-selected="false" data-tab="saglik" onclick="show('saglik',this)"><i class="fas fa-heartbeat"></i>Sağlık</button>
-    <button role="tab" aria-selected="false" data-tab="ehliyet" onclick="show('ehliyet',this)"><i class="fas fa-id-card"></i>Ehliyet</button>
-    <button role="tab" aria-selected="false" data-tab="ssn" onclick="show('ssn',this)"><i class="fas fa-id-card-alt"></i>SSN</button>
-    <button role="tab" aria-selected="false" data-tab="banka" onclick="show('banka',this)"><i class="fas fa-university"></i>Banka</button>
-    <button role="tab" aria-selected="false" data-tab="telefon" onclick="show('telefon',this)"><i class="fas fa-phone"></i>Telefon</button>
-    <button role="tab" aria-selected="false" data-tab="arac" onclick="show('arac',this)"><i class="fas fa-car-side"></i>Araç Bulma</button>
-    <button role="tab" aria-selected="false" data-tab="wise" onclick="show('wise',this)"><i class="fas fa-exchange-alt"></i>Para Transferi</button>
-    <button role="tab" aria-selected="false" data-tab="ucak" onclick="show('ucak',this)"><i class="fas fa-plane"></i>Uçak</button>
-    <button role="tab" aria-selected="false" data-tab="sorgu" onclick="show('sorgu',this)"><i class="fas fa-question-circle"></i>Soru Sor</button>
-    <button role="tab" aria-selected="false" data-tab="feedback" onclick="show('feedback',this)"><i class="fas fa-comment-dots"></i>Geri Bildirim</button>
+    <button type="button" class="active" role="tab" aria-selected="true" data-tab="vize"><i class="fas fa-passport"></i>Vize</button>
+    <button type="button" role="tab" aria-selected="false" data-tab="vergi"><i class="fas fa-calculator"></i>Vergi</button>
+    <button type="button" role="tab" aria-selected="false" data-tab="rideshare"><i class="fas fa-car"></i>İş (Rideshare)</button>
+    <button type="button" role="tab" aria-selected="false" data-tab="ev"><i class="fas fa-home"></i>Ev Bulma</button>
+    <button type="button" role="tab" aria-selected="false" data-tab="saglik"><i class="fas fa-heartbeat"></i>Sağlık</button>
+    <button type="button" role="tab" aria-selected="false" data-tab="ehliyet"><i class="fas fa-id-card"></i>Ehliyet</button>
+    <button type="button" role="tab" aria-selected="false" data-tab="ssn"><i class="fas fa-id-card-alt"></i>SSN</button>
+    <button type="button" role="tab" aria-selected="false" data-tab="banka"><i class="fas fa-university"></i>Banka</button>
+    <button type="button" role="tab" aria-selected="false" data-tab="telefon"><i class="fas fa-phone"></i>Telefon</button>
+    <button type="button" role="tab" aria-selected="false" data-tab="arac"><i class="fas fa-car-side"></i>Araç Bulma</button>
+    <button type="button" role="tab" aria-selected="false" data-tab="wise"><i class="fas fa-exchange-alt"></i>Para Transferi</button>
+    <button type="button" role="tab" aria-selected="false" data-tab="ucak"><i class="fas fa-plane"></i>Uçak</button>
+    <button type="button" role="tab" aria-selected="false" data-tab="sorgu"><i class="fas fa-question-circle"></i>Soru Sor</button>
+    <button type="button" role="tab" aria-selected="false" data-tab="feedback"><i class="fas fa-comment-dots"></i>Geri Bildirim</button>
   </div>
 
   <div id="vize" class="tab active"><div class="card">
@@ -462,8 +462,8 @@ textarea{resize:vertical;min-height:90px}
       <div class="field"><label for="v2">Eyalet</label><select id="v2"><option value="Alabama">Alabama</option><option value="Alaska">Alaska</option><option value="Arizona">Arizona</option><option value="Arkansas">Arkansas</option><option value="California">California</option><option value="Colorado">Colorado</option><option value="Connecticut">Connecticut</option><option value="Delaware">Delaware</option><option value="Florida">Florida</option><option value="Georgia">Georgia</option><option value="Hawaii">Hawaii</option><option value="Idaho">Idaho</option><option value="Illinois">Illinois</option><option value="Indiana">Indiana</option><option value="Iowa">Iowa</option><option value="Kansas">Kansas</option><option value="Kentucky">Kentucky</option><option value="Louisiana">Louisiana</option><option value="Maine">Maine</option><option value="Maryland">Maryland</option><option value="Massachusetts">Massachusetts</option><option value="Michigan">Michigan</option><option value="Minnesota">Minnesota</option><option value="Mississippi">Mississippi</option><option value="Missouri">Missouri</option><option value="Montana">Montana</option><option value="Nebraska">Nebraska</option><option value="Nevada">Nevada</option><option value="New Hampshire">New Hampshire</option><option value="New Jersey" selected>New Jersey</option><option value="New Mexico">New Mexico</option><option value="New York">New York</option><option value="North Carolina">North Carolina</option><option value="North Dakota">North Dakota</option><option value="Ohio">Ohio</option><option value="Oklahoma">Oklahoma</option><option value="Oregon">Oregon</option><option value="Pennsylvania">Pennsylvania</option><option value="Rhode Island">Rhode Island</option><option value="South Carolina">South Carolina</option><option value="South Dakota">South Dakota</option><option value="Tennessee">Tennessee</option><option value="Texas">Texas</option><option value="Utah">Utah</option><option value="Vermont">Vermont</option><option value="Virginia">Virginia</option><option value="Washington">Washington</option><option value="West Virginia">West Virginia</option><option value="Wisconsin">Wisconsin</option><option value="Wyoming">Wyoming</option></select></div>
     </div>
     <div class="field"><label for="v3">Özel Durum</label><input id="v3" maxlength="2000" placeholder="örn. İlk başvuru, uzatma, reddedildim"></div>
-    <button class="btn" id="vb" onclick="call('/vize',{tip:g('v1'),state:g('v2'),durum:g('v3')},'vo','vb','Kişisel Vize Planı Oluştur')">Kişisel Vize Planı Oluştur</button>
-    <div class="output-wrap"><div id="vo" class="output">Sonuç burada görünecek...</div><button class="copy-btn" onclick="cp('vo')">Kopyala</button></div>
+    <button type="button" class="btn" id="vb" data-action="vize">Kişisel Vize Planı Oluştur</button>
+    <div class="output-wrap"><div id="vo" class="output">Sonuç burada görünecek...</div><button type="button" class="copy-btn" data-copy-target="vo">Kopyala</button></div>
   </div></div>
 
   <div id="vergi" class="tab"><div class="card">
@@ -477,8 +477,8 @@ textarea{resize:vertical;min-height:90px}
       <div class="field"><label for="t3">Vize Tipin</label><select id="t3"><option>F-1 / J-1</option><option>H-1B</option><option>Green Card</option><option>Vatandaş</option></select></div>
       <div class="field"><label for="t4">Eyalet</label><select id="t4"><option value="Alabama">Alabama</option><option value="Alaska">Alaska</option><option value="Arizona">Arizona</option><option value="Arkansas">Arkansas</option><option value="California">California</option><option value="Colorado">Colorado</option><option value="Connecticut">Connecticut</option><option value="Delaware">Delaware</option><option value="Florida">Florida</option><option value="Georgia">Georgia</option><option value="Hawaii">Hawaii</option><option value="Idaho">Idaho</option><option value="Illinois">Illinois</option><option value="Indiana">Indiana</option><option value="Iowa">Iowa</option><option value="Kansas">Kansas</option><option value="Kentucky">Kentucky</option><option value="Louisiana">Louisiana</option><option value="Maine">Maine</option><option value="Maryland">Maryland</option><option value="Massachusetts">Massachusetts</option><option value="Michigan">Michigan</option><option value="Minnesota">Minnesota</option><option value="Mississippi">Mississippi</option><option value="Missouri">Missouri</option><option value="Montana">Montana</option><option value="Nebraska">Nebraska</option><option value="Nevada">Nevada</option><option value="New Hampshire">New Hampshire</option><option value="New Jersey" selected>New Jersey</option><option value="New Mexico">New Mexico</option><option value="New York">New York</option><option value="North Carolina">North Carolina</option><option value="North Dakota">North Dakota</option><option value="Ohio">Ohio</option><option value="Oklahoma">Oklahoma</option><option value="Oregon">Oregon</option><option value="Pennsylvania">Pennsylvania</option><option value="Rhode Island">Rhode Island</option><option value="South Carolina">South Carolina</option><option value="South Dakota">South Dakota</option><option value="Tennessee">Tennessee</option><option value="Texas">Texas</option><option value="Utah">Utah</option><option value="Vermont">Vermont</option><option value="Virginia">Virginia</option><option value="Washington">Washington</option><option value="West Virginia">West Virginia</option><option value="Wisconsin">Wisconsin</option><option value="Wyoming">Wyoming</option></select></div>
     </div>
-    <button class="btn" id="tb" onclick="call('/vergi',{form:g('t1'),kazanc:g('t2'),vize:g('t3'),state:g('t4')},'to','tb','Vergi Kontrol Listesi Oluştur')">Vergi Kontrol Listesi Oluştur</button>
-    <div class="output-wrap"><div id="to" class="output">Sonuç burada görünecek...</div><button class="copy-btn" onclick="cp('to')">Kopyala</button></div>
+    <button type="button" class="btn" id="tb" data-action="vergi">Vergi Kontrol Listesi Oluştur</button>
+    <div class="output-wrap"><div id="to" class="output">Sonuç burada görünecek...</div><button type="button" class="copy-btn" data-copy-target="to">Kopyala</button></div>
   </div></div>
 
   <div id="rideshare" class="tab"><div class="card">
@@ -489,8 +489,8 @@ textarea{resize:vertical;min-height:90px}
       <div class="field"><label for="r2">Eyalet</label><select id="r2"><option value="Alabama">Alabama</option><option value="Alaska">Alaska</option><option value="Arizona">Arizona</option><option value="Arkansas">Arkansas</option><option value="California">California</option><option value="Colorado">Colorado</option><option value="Connecticut">Connecticut</option><option value="Delaware">Delaware</option><option value="Florida">Florida</option><option value="Georgia">Georgia</option><option value="Hawaii">Hawaii</option><option value="Idaho">Idaho</option><option value="Illinois">Illinois</option><option value="Indiana">Indiana</option><option value="Iowa">Iowa</option><option value="Kansas">Kansas</option><option value="Kentucky">Kentucky</option><option value="Louisiana">Louisiana</option><option value="Maine">Maine</option><option value="Maryland">Maryland</option><option value="Massachusetts">Massachusetts</option><option value="Michigan">Michigan</option><option value="Minnesota">Minnesota</option><option value="Mississippi">Mississippi</option><option value="Missouri">Missouri</option><option value="Montana">Montana</option><option value="Nebraska">Nebraska</option><option value="Nevada">Nevada</option><option value="New Hampshire">New Hampshire</option><option value="New Jersey" selected>New Jersey</option><option value="New Mexico">New Mexico</option><option value="New York">New York</option><option value="North Carolina">North Carolina</option><option value="North Dakota">North Dakota</option><option value="Ohio">Ohio</option><option value="Oklahoma">Oklahoma</option><option value="Oregon">Oregon</option><option value="Pennsylvania">Pennsylvania</option><option value="Rhode Island">Rhode Island</option><option value="South Carolina">South Carolina</option><option value="South Dakota">South Dakota</option><option value="Tennessee">Tennessee</option><option value="Texas">Texas</option><option value="Utah">Utah</option><option value="Vermont">Vermont</option><option value="Virginia">Virginia</option><option value="Washington">Washington</option><option value="West Virginia">West Virginia</option><option value="Wisconsin">Wisconsin</option><option value="Wyoming">Wyoming</option></select></div>
     </div>
     <div class="field"><label for="r3">Konu</label><select id="r3"><option>Nasıl başlarım?</option><option>1099 formu / vergi</option><option>Haftada ne kadar kazanırım?</option><option>Masraf düşümü (deduction)</option></select></div>
-    <button class="btn" id="rb" onclick="call('/rideshare',{app:g('r1'),state:g('r2'),konu:g('r3')},'ro','rb','Rideshare Rehberi')">Planı Oluştur</button>
-    <div class="output-wrap"><div id="ro" class="output">Sonuç burada görünecek...</div><button class="copy-btn" onclick="cp('ro')">Kopyala</button></div>
+    <button type="button" class="btn" id="rb" data-action="rideshare">Planı Oluştur</button>
+    <div class="output-wrap"><div id="ro" class="output">Sonuç burada görünecek...</div><button type="button" class="copy-btn" data-copy-target="ro">Kopyala</button></div>
   </div></div>
 
   <div id="ev" class="tab"><div class="card">
@@ -501,8 +501,8 @@ textarea{resize:vertical;min-height:90px}
       <div class="field"><label for="e2">Bütçe ($/ay)</label><input id="e2" type="number" min="0" placeholder="1200"></div>
     </div>
     <div class="field"><label for="e3">Özel Durum</label><input id="e3" maxlength="2000" placeholder="örn. SSN yok, kredi skoru yok, evcil hayvan var"></div>
-    <button class="btn" id="eb" onclick="call('/ev',{sehir:g('e1'),butce:g('e2'),durum:g('e3')},'eo','eb','Ev Bulma Rehberi')">Planı Oluştur</button>
-    <div class="output-wrap"><div id="eo" class="output">Sonuç burada görünecek...</div><button class="copy-btn" onclick="cp('eo')">Kopyala</button></div>
+    <button type="button" class="btn" id="eb" data-action="ev">Planı Oluştur</button>
+    <div class="output-wrap"><div id="eo" class="output">Sonuç burada görünecek...</div><button type="button" class="copy-btn" data-copy-target="eo">Kopyala</button></div>
   </div></div>
 
   <div id="saglik" class="tab"><div class="card">
@@ -512,8 +512,8 @@ textarea{resize:vertical;min-height:90px}
       <div class="field"><label for="h1">Eyalet</label><select id="h1"><option value="Alabama">Alabama</option><option value="Alaska">Alaska</option><option value="Arizona">Arizona</option><option value="Arkansas">Arkansas</option><option value="California">California</option><option value="Colorado">Colorado</option><option value="Connecticut">Connecticut</option><option value="Delaware">Delaware</option><option value="Florida">Florida</option><option value="Georgia">Georgia</option><option value="Hawaii">Hawaii</option><option value="Idaho">Idaho</option><option value="Illinois">Illinois</option><option value="Indiana">Indiana</option><option value="Iowa">Iowa</option><option value="Kansas">Kansas</option><option value="Kentucky">Kentucky</option><option value="Louisiana">Louisiana</option><option value="Maine">Maine</option><option value="Maryland">Maryland</option><option value="Massachusetts">Massachusetts</option><option value="Michigan">Michigan</option><option value="Minnesota">Minnesota</option><option value="Mississippi">Mississippi</option><option value="Missouri">Missouri</option><option value="Montana">Montana</option><option value="Nebraska">Nebraska</option><option value="Nevada">Nevada</option><option value="New Hampshire">New Hampshire</option><option value="New Jersey" selected>New Jersey</option><option value="New Mexico">New Mexico</option><option value="New York">New York</option><option value="North Carolina">North Carolina</option><option value="North Dakota">North Dakota</option><option value="Ohio">Ohio</option><option value="Oklahoma">Oklahoma</option><option value="Oregon">Oregon</option><option value="Pennsylvania">Pennsylvania</option><option value="Rhode Island">Rhode Island</option><option value="South Carolina">South Carolina</option><option value="South Dakota">South Dakota</option><option value="Tennessee">Tennessee</option><option value="Texas">Texas</option><option value="Utah">Utah</option><option value="Vermont">Vermont</option><option value="Virginia">Virginia</option><option value="Washington">Washington</option><option value="West Virginia">West Virginia</option><option value="Wisconsin">Wisconsin</option><option value="Wyoming">Wyoming</option></select></div>
       <div class="field"><label for="h2">Durum</label><select id="h2"><option>Sigorta yok, nasıl alırım?</option><option>Medicaid nasıl başvururum?</option><option>Ücretsiz klinik nerede?</option><option>SSN olmadan sigorta olur mu?</option></select></div>
     </div>
-    <button class="btn" id="hb" onclick="call('/saglik',{state:g('h1'),durum:g('h2')},'ho','hb','Sağlık Rehberi')">Rehber Oluştur</button>
-    <div class="output-wrap"><div id="ho" class="output">Sonuç burada görünecek...</div><button class="copy-btn" onclick="cp('ho')">Kopyala</button></div>
+    <button type="button" class="btn" id="hb" data-action="saglik">Rehber Oluştur</button>
+    <div class="output-wrap"><div id="ho" class="output">Sonuç burada görünecek...</div><button type="button" class="copy-btn" data-copy-target="ho">Kopyala</button></div>
   </div></div>
 
   <div id="ehliyet" class="tab"><div class="card">
@@ -523,8 +523,8 @@ textarea{resize:vertical;min-height:90px}
       <div class="field"><label for="l1">Eyalet</label><select id="l1"><option value="Alabama">Alabama</option><option value="Alaska">Alaska</option><option value="Arizona">Arizona</option><option value="Arkansas">Arkansas</option><option value="California">California</option><option value="Colorado">Colorado</option><option value="Connecticut">Connecticut</option><option value="Delaware">Delaware</option><option value="Florida">Florida</option><option value="Georgia">Georgia</option><option value="Hawaii">Hawaii</option><option value="Idaho">Idaho</option><option value="Illinois">Illinois</option><option value="Indiana">Indiana</option><option value="Iowa">Iowa</option><option value="Kansas">Kansas</option><option value="Kentucky">Kentucky</option><option value="Louisiana">Louisiana</option><option value="Maine">Maine</option><option value="Maryland">Maryland</option><option value="Massachusetts">Massachusetts</option><option value="Michigan">Michigan</option><option value="Minnesota">Minnesota</option><option value="Mississippi">Mississippi</option><option value="Missouri">Missouri</option><option value="Montana">Montana</option><option value="Nebraska">Nebraska</option><option value="Nevada">Nevada</option><option value="New Hampshire">New Hampshire</option><option value="New Jersey" selected>New Jersey</option><option value="New Mexico">New Mexico</option><option value="New York">New York</option><option value="North Carolina">North Carolina</option><option value="North Dakota">North Dakota</option><option value="Ohio">Ohio</option><option value="Oklahoma">Oklahoma</option><option value="Oregon">Oregon</option><option value="Pennsylvania">Pennsylvania</option><option value="Rhode Island">Rhode Island</option><option value="South Carolina">South Carolina</option><option value="South Dakota">South Dakota</option><option value="Tennessee">Tennessee</option><option value="Texas">Texas</option><option value="Utah">Utah</option><option value="Vermont">Vermont</option><option value="Virginia">Virginia</option><option value="Washington">Washington</option><option value="West Virginia">West Virginia</option><option value="Wisconsin">Wisconsin</option><option value="Wyoming">Wyoming</option></select></div>
       <div class="field"><label for="l2">Durum</label><select id="l2"><option>İlk kez alıyorum</option><option>Türk ehliyetimi çevirmek istiyorum</option><option>SSN / ITIN yok</option><option>Real ID lazım</option></select></div>
     </div>
-    <button class="btn" id="lb" onclick="call('/ehliyet',{state:g('l1'),durum:g('l2')},'lo','lb','Ehliyet Rehberi')">Rehber Oluştur</button>
-    <div class="output-wrap"><div id="lo" class="output">Sonuç burada görünecek...</div><button class="copy-btn" onclick="cp('lo')">Kopyala</button></div>
+    <button type="button" class="btn" id="lb" data-action="ehliyet">Rehber Oluştur</button>
+    <div class="output-wrap"><div id="lo" class="output">Sonuç burada görünecek...</div><button type="button" class="copy-btn" data-copy-target="lo">Kopyala</button></div>
   </div></div>
 
 <div id="ssn" class="tab">
@@ -552,10 +552,10 @@ textarea{resize:vertical;min-height:90px}
       <label for="ss3">Durum</label>
       <input id="ss3" maxlength="2000" placeholder="örn. CPT onayım var, OPT bekliyorum, ITIN var mı?">
     </div>
-    <button class="btn" id="ssb" onclick="call('/ssn',{vize:g('ss1'),state:g('ss2'),durum:g('ss3')},'sso','ssb','SSN Rehberi Oluştur')">SSN Rehberi Oluştur</button>
+    <button type="button" class="btn" id="ssb" data-action="ssn">SSN Rehberi Oluştur</button>
     <div class="output-wrap">
       <div id="sso" class="output">Sonuç burada görünecek...</div>
-      <button class="copy-btn" onclick="cp('sso')">Kopyala</button>
+      <button type="button" class="copy-btn" data-copy-target="sso">Kopyala</button>
     </div>
   </div>
 </div>
@@ -564,16 +564,16 @@ textarea{resize:vertical;min-height:90px}
     <h2><i class="fas fa-university"></i> Banka Hesabı Açma</h2>
     <div class="hint">💳 <strong>İpucu:</strong> Chase/BofA pasaportla açılıyor. Secured card ile kredi skoru başlatılır.</div>
     <div class="field"><label for="ba1">Durum</label><select id="ba1"><option>SSN olmadan banka açmak istiyorum</option><option>Kredi kartı almak istiyorum</option><option>Credit score sıfırdan nasıl yaparım?</option><option>En iyi ücretsiz banka hangisi?</option></select></div>
-    <button class="btn" id="bb" onclick="call('/banka',{durum:g('ba1')},'bo','bb','Banka Rehberi')">Rehber Oluştur</button>
-    <div class="output-wrap"><div id="bo" class="output">Sonuç burada görünecek...</div><button class="copy-btn" onclick="cp('bo')">Kopyala</button></div>
+    <button type="button" class="btn" id="bb" data-action="banka">Rehber Oluştur</button>
+    <div class="output-wrap"><div id="bo" class="output">Sonuç burada görünecek...</div><button type="button" class="copy-btn" data-copy-target="bo">Kopyala</button></div>
   </div></div>
 
   <div id="telefon" class="tab"><div class="card">
     <h2><i class="fas fa-phone"></i> ABD Telefon Numarası</h2>
     <div class="hint">📱 <strong>İpucu:</strong> Google Voice ile SSN olmadan ücretsiz Amerikan numarası alabilirsin.</div>
     <div class="field"><label for="p1">Konu</label><select id="p1"><option>Ücretsiz numara (Google Voice)</option><option>Ucuz hat (Mint, Visible, T-Mobile)</option><option>SSN olmadan kontrat hat</option><option>Türkiye'yi ucuz arama</option></select></div>
-    <button class="btn" id="pb" onclick="call('/telefon',{konu:g('p1')},'po','pb','Telefon Rehberi')">Rehber Oluştur</button>
-    <div class="output-wrap"><div id="po" class="output">Sonuç burada görünecek...</div><button class="copy-btn" onclick="cp('po')">Kopyala</button></div>
+    <button type="button" class="btn" id="pb" data-action="telefon">Rehber Oluştur</button>
+    <div class="output-wrap"><div id="po" class="output">Sonuç burada görünecek...</div><button type="button" class="copy-btn" data-copy-target="po">Kopyala</button></div>
   </div></div>
 
   <div id="arac" class="tab"><div class="card">
@@ -583,16 +583,16 @@ textarea{resize:vertical;min-height:90px}
       <div class="field"><label for="ar1">Eyalet</label><select id="ar1"><option value="Alabama">Alabama</option><option value="Alaska">Alaska</option><option value="Arizona">Arizona</option><option value="Arkansas">Arkansas</option><option value="California">California</option><option value="Colorado">Colorado</option><option value="Connecticut">Connecticut</option><option value="Delaware">Delaware</option><option value="Florida">Florida</option><option value="Georgia">Georgia</option><option value="Hawaii">Hawaii</option><option value="Idaho">Idaho</option><option value="Illinois">Illinois</option><option value="Indiana">Indiana</option><option value="Iowa">Iowa</option><option value="Kansas">Kansas</option><option value="Kentucky">Kentucky</option><option value="Louisiana">Louisiana</option><option value="Maine">Maine</option><option value="Maryland">Maryland</option><option value="Massachusetts">Massachusetts</option><option value="Michigan">Michigan</option><option value="Minnesota">Minnesota</option><option value="Mississippi">Mississippi</option><option value="Missouri">Missouri</option><option value="Montana">Montana</option><option value="Nebraska">Nebraska</option><option value="Nevada">Nevada</option><option value="New Hampshire">New Hampshire</option><option value="New Jersey" selected>New Jersey</option><option value="New Mexico">New Mexico</option><option value="New York">New York</option><option value="North Carolina">North Carolina</option><option value="North Dakota">North Dakota</option><option value="Ohio">Ohio</option><option value="Oklahoma">Oklahoma</option><option value="Oregon">Oregon</option><option value="Pennsylvania">Pennsylvania</option><option value="Rhode Island">Rhode Island</option><option value="South Carolina">South Carolina</option><option value="South Dakota">South Dakota</option><option value="Tennessee">Tennessee</option><option value="Texas">Texas</option><option value="Utah">Utah</option><option value="Vermont">Vermont</option><option value="Virginia">Virginia</option><option value="Washington">Washington</option><option value="West Virginia">West Virginia</option><option value="Wisconsin">Wisconsin</option><option value="Wyoming">Wyoming</option></select></div>
       <div class="field"><label for="ar2">Konu</label><select id="ar2"><option>İkinci el araç almak istiyorum</option><option>Araç kiralamak istiyorum</option><option>Araç sigortası almak istiyorum</option><option>SSN olmadan araç alınır mı?</option></select></div>
     </div>
-    <button class="btn" id="arb" onclick="call('/arac',{state:g('ar1'),konu:g('ar2')},'aro','arb','Araç Rehberi')">Rehber Oluştur</button>
-    <div class="output-wrap"><div id="aro" class="output">Sonuç burada görünecek...</div><button class="copy-btn" onclick="cp('aro')">Kopyala</button></div>
+    <button type="button" class="btn" id="arb" data-action="arac">Rehber Oluştur</button>
+    <div class="output-wrap"><div id="aro" class="output">Sonuç burada görünecek...</div><button type="button" class="copy-btn" data-copy-target="aro">Kopyala</button></div>
   </div></div>
 
   <div id="wise" class="tab"><div class="card">
     <h2><i class="fas fa-exchange-alt"></i> Para Transfer (Wise / Zelle)</h2>
     <div class="hint">💸 <strong>İpucu:</strong> Wise ile TL/$ kurunu en düşük komisyonla gönder.</div>
     <div class="field"><label for="w1">Konu</label><select id="w1"><option>Wise ile Türkiye'ye para gönderme</option><option>Wise limitleri ve ücretleri</option><option>Zelle nasıl kullanılır?</option><option>Venmo / CashApp rehberi</option></select></div>
-    <button class="btn" id="wb" onclick="call('/wise',{konu:g('w1')},'wo','wb','Para Transfer Rehberi')">Rehber Oluştur</button>
-    <div class="output-wrap"><div id="wo" class="output">Sonuç burada görünecek...</div><button class="copy-btn" onclick="cp('wo')">Kopyala</button></div>
+    <button type="button" class="btn" id="wb" data-action="wise">Rehber Oluştur</button>
+    <div class="output-wrap"><div id="wo" class="output">Sonuç burada görünecek...</div><button type="button" class="copy-btn" data-copy-target="wo">Kopyala</button></div>
   </div></div>
 
   <div id="ucak" class="tab"><div class="card">
@@ -602,16 +602,16 @@ textarea{resize:vertical;min-height:90px}
       <div class="field"><label for="u1">Havayolu</label><select id="u1"><option>Turkish Airlines</option><option>American Airlines</option><option>United</option><option>Delta</option></select></div>
       <div class="field"><label for="u2">Konu</label><select id="u2"><option>Bagaj ücretleri ve kurallar</option><option>En ucuz bilet nasıl bulunur?</option><option>Check-in rehberi</option><option>Refund / iptal kuralları</option></select></div>
     </div>
-    <button class="btn" id="ub" onclick="call('/ucak',{havayolu:g('u1'),konu:g('u2')},'uo','ub','Uçak Rehberi')">Rehber Oluştur</button>
-    <div class="output-wrap"><div id="uo" class="output">Sonuç burada görünecek...</div><button class="copy-btn" onclick="cp('uo')">Kopyala</button></div>
+    <button type="button" class="btn" id="ub" data-action="ucak">Rehber Oluştur</button>
+    <div class="output-wrap"><div id="uo" class="output">Sonuç burada görünecek...</div><button type="button" class="copy-btn" data-copy-target="uo">Kopyala</button></div>
   </div></div>
 
   <div id="sorgu" class="tab"><div class="card">
     <h2><i class="fas fa-question-circle"></i> Herhangi Bir Soru Sor</h2>
     <div class="hint">🤖 ABD hayatıyla ilgili aklına takılan her şeyi sor. Türkçe cevap gelir.</div>
     <div class="field"><label for="q1">Sorun nedir?</label><textarea id="q1" rows="4" maxlength="2000" placeholder="örn. SSN olmadan iş bulabilir miyim? İlk ay ne yapmalıyım?"></textarea></div>
-    <button class="btn" id="qb" onclick="call('/sorgu',{soru:g('q1')},'qo','qb','Cevapla')">Cevapla</button>
-    <div class="output-wrap"><div id="qo" class="output">Sonuç burada görünecek...</div><button class="copy-btn" onclick="cp('qo')">Kopyala</button></div>
+    <button type="button" class="btn" id="qb" data-action="sorgu">Cevapla</button>
+    <div class="output-wrap"><div id="qo" class="output">Sonuç burada görünecek...</div><button type="button" class="copy-btn" data-copy-target="qo">Kopyala</button></div>
   </div></div>
 
 
@@ -629,12 +629,15 @@ textarea{resize:vertical;min-height:90px}
   </span>
 </div>
 <script>
-function g(id){return document.getElementById(id).value;}
+function g(id){
+  var el=document.getElementById(id);
+  return el?el.value:'';
+}
 function show(tab,btn){
-  const target=document.getElementById(tab);
+  var target=document.getElementById(tab);
   if(!target) return;
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.tabs button').forEach(b=>{
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
+  document.querySelectorAll('.tabs button').forEach(function(b){
     b.classList.remove('active');
     b.setAttribute('aria-selected','false');
   });
@@ -644,34 +647,19 @@ function show(tab,btn){
     btn.setAttribute('aria-selected','true');
   }
 }
-function quickStart(tab){
-  const target=document.getElementById(tab);
-  if(!target) return;
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.tabs button').forEach(b=>{
-    b.classList.remove('active');
-    b.setAttribute('aria-selected','false');
-  });
-  target.classList.add('active');
-  const match=[...document.querySelectorAll('.tabs button[data-tab]')].find(b=>b.dataset.tab===tab);
-  if(match){match.classList.add('active');match.setAttribute('aria-selected','true');}
-  const firstInput=target.querySelector('input,select,textarea');
-  if(firstInput) firstInput.focus({preventScroll:true});
-  target.scrollIntoView({behavior:'smooth',block:'start'});
-}
 function cp(id){
-  const el=document.getElementById(id);
-  const txt=el.innerText;
-  const btn=el.parentNode.querySelector('.copy-btn');
-  function _ok(){btn.textContent='Kopyalandı!';setTimeout(()=>btn.textContent='Kopyala',2000);}
-  if(navigator.clipboard && window.isSecureContext !== false){
-    navigator.clipboard.writeText(txt).then(_ok).catch(()=>_fallbackCopy(txt,_ok));
+  var el=document.getElementById(id);
+  var txt=el.innerText;
+  var btn=el.parentNode.querySelector('.copy-btn');
+  function _ok(){btn.textContent='Kopyalandı!';setTimeout(function(){btn.textContent='Kopyala';},2000);}
+  if(navigator.clipboard && window.isSecureContext!==false){
+    navigator.clipboard.writeText(txt).then(_ok).catch(function(){_fallbackCopy(txt,_ok);});
   }else{
     _fallbackCopy(txt,_ok);
   }
 }
 function _fallbackCopy(txt,cb){
-  const ta=document.createElement('textarea');
+  var ta=document.createElement('textarea');
   ta.value=txt;ta.style.position='fixed';ta.style.opacity='0';
   document.body.appendChild(ta);ta.select();
   try{document.execCommand('copy');cb();}catch(e){}
@@ -679,22 +667,22 @@ function _fallbackCopy(txt,cb){
 }
 function formatResult(text){
   function escape(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
-  const paragraphs=text.split(/\n{2,}/);
-  return paragraphs.map(para=>{
-    const lines=para.split('\n').filter(l=>l.trim());
+  var paragraphs=text.split(/\n{2,}/);
+  return paragraphs.map(function(para){
+    var lines=para.split('\n').filter(function(l){return l.trim();});
     if(!lines.length) return '';
-    const isOrdered=lines.every(l=>/^\d+\.\s/.test(l.trim()));
-    const isBullet=lines.every(l=>/^[-•]\s/.test(l.trim()));
+    var isOrdered=lines.every(function(l){return /^\d+\.\s/.test(l.trim());});
+    var isBullet=lines.every(function(l){return /^[-•]\s/.test(l.trim());});
     if(isOrdered){
-      const items=lines.map(l=>'<li>'+escape(l.trim().replace(/^\d+\.\s/,''))+'</li>').join('');
+      var items=lines.map(function(l){return '<li>'+escape(l.trim().replace(/^\d+\.\s/,''))+'</li>';}).join('');
       return '<ol>'+items+'</ol>';
     }
     if(isBullet){
-      const items=lines.map(l=>'<li>'+escape(l.trim().replace(/^[-•]\s/,''))+'</li>').join('');
+      var items=lines.map(function(l){return '<li>'+escape(l.trim().replace(/^[-•]\s/,''))+'</li>';}).join('');
       return '<ul>'+items+'</ul>';
     }
-    return lines.map(l=>{
-      const t=l.trim();
+    return lines.map(function(l){
+      var t=l.trim();
       if(!t) return '';
       if(/^[A-ZÇĞİÖŞÜ][^a-zçğışöüa-z]{3,}$/.test(t)||(/[:\uFF1A]$/.test(t)&&t.length<80)){
         return '<p><strong>'+escape(t)+'</strong></p>';
@@ -704,27 +692,25 @@ function formatResult(text){
   }).join('');
 }
 async function call(endpoint,data,outId,btnId,label){
-  const out=document.getElementById(outId);
-  const btn=document.getElementById(btnId);
+  var out=document.getElementById(outId);
+  var btn=document.getElementById(btnId);
   btn.disabled=true;
   btn.innerHTML='<span class=\"spinner\"></span>Yükleniyor...';
-  out.classList.add('loading');
+  out.className='output loading';
   out.textContent='Rehberiniz oluşturuluyor...';
   try{
-    const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
-    const j=await r.json().catch(()=>({}));
+    var r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    var j=await r.json().catch(function(){return {};});
     if(!r.ok){
-      out.classList.remove('loading');
-      out.classList.add('error');
-      out.textContent='Hata: '+(j.error || 'İstek işlenemedi.');
+      out.className='output error';
+      out.textContent='Hata: '+(j.error||'İstek işlenemedi.');
       return;
     }
-    out.classList.remove('loading');
-    out.innerHTML=formatResult(j.result || 'Sonuç üretilemedi.');
+    out.className='output';
+    out.innerHTML=formatResult(j.result||'Sonuç üretilemedi.');
     out.scrollIntoView({behavior:'smooth',block:'nearest'});
   }catch(e){
-    out.classList.remove('loading');
-    out.classList.add('error');
+    out.className='output error';
     out.textContent='Bağlantı hatası: '+e.message;
   }finally{
     btn.disabled=false;
@@ -732,15 +718,56 @@ async function call(endpoint,data,outId,btnId,label){
   }
 }
 
+var ACTION_MAP={
+  'vize':      function(){return ['/vize',      {tip:g('v1'),state:g('v2'),durum:g('v3')},  'vo',  'vb',  'Kişisel Vize Planı Oluştur'];},
+  'vergi':     function(){return ['/vergi',     {form:g('t1'),kazanc:g('t2'),vize:g('t3'),state:g('t4')},'to','tb','Vergi Kontrol Listesi Oluştur'];},
+  'rideshare': function(){return ['/rideshare', {app:g('r1'),state:g('r2'),konu:g('r3')},   'ro',  'rb',  'Planı Oluştur'];},
+  'ev':        function(){return ['/ev',        {sehir:g('e1'),butce:g('e2'),durum:g('e3')},'eo',  'eb',  'Planı Oluştur'];},
+  'saglik':    function(){return ['/saglik',    {state:g('h1'),durum:g('h2')},               'ho',  'hb',  'Rehber Oluştur'];},
+  'ehliyet':   function(){return ['/ehliyet',   {state:g('l1'),durum:g('l2')},               'lo',  'lb',  'Rehber Oluştur'];},
+  'ssn':       function(){return ['/ssn',       {vize:g('ss1'),state:g('ss2'),durum:g('ss3')},'sso','ssb', 'SSN Rehberi Oluştur'];},
+  'banka':     function(){return ['/banka',     {durum:g('ba1')},                            'bo',  'bb',  'Rehber Oluştur'];},
+  'telefon':   function(){return ['/telefon',   {konu:g('p1')},                              'po',  'pb',  'Rehber Oluştur'];},
+  'arac':      function(){return ['/arac',      {state:g('ar1'),konu:g('ar2')},              'aro', 'arb', 'Rehber Oluştur'];},
+  'wise':      function(){return ['/wise',      {konu:g('w1')},                              'wo',  'wb',  'Rehber Oluştur'];},
+  'ucak':      function(){return ['/ucak',      {havayolu:g('u1'),konu:g('u2')},             'uo',  'ub',  'Rehber Oluştur'];},
+  'sorgu':     function(){return ['/sorgu',     {soru:g('q1')},                              'qo',  'qb',  'Cevapla'];}
+};
+
+function quickStart(tab){
+  var target=document.getElementById(tab);
+  if(!target) return;
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
+  document.querySelectorAll('.tabs button').forEach(function(b){
+    b.classList.remove('active');
+    b.setAttribute('aria-selected','false');
+  });
+  target.classList.add('active');
+  var match=document.querySelector('.tabs button[data-tab="'+tab+'"]');
+  if(match){match.classList.add('active');match.setAttribute('aria-selected','true');}
+  var firstInput=target.querySelector('input,select,textarea');
+  if(firstInput) firstInput.focus({preventScroll:true});
+  target.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
 document.addEventListener('DOMContentLoaded',function(){
   document.querySelectorAll('.tabs button[data-tab]').forEach(function(btn){
     btn.addEventListener('click',function(){show(btn.dataset.tab,btn);});
   });
   document.addEventListener('click',function(e){
-    const qs=e.target.closest('[data-quickstart]');
-    if(qs) quickStart(qs.dataset.quickstart);
+    var btn=e.target.closest('[data-action]');
+    if(btn){
+      var action=btn.dataset.action;
+      var fn=ACTION_MAP[action];
+      if(fn){var args=fn();call(args[0],args[1],args[2],args[3],args[4]);}
+      return;
+    }
+    var copyBtn=e.target.closest('.copy-btn[data-copy-target]');
+    if(copyBtn){cp(copyBtn.dataset.copyTarget);return;}
+    var qs=e.target.closest('[data-quickstart]');
+    if(qs){quickStart(qs.dataset.quickstart);return;}
   });
-  const h1=document.getElementById('siteTitle');
+  var h1=document.getElementById('siteTitle');
   if(h1) h1.addEventListener('click',function(){
     document.querySelectorAll('input,textarea').forEach(function(el){el.value='';});
     document.querySelectorAll('select').forEach(function(el){el.selectedIndex=0;});
