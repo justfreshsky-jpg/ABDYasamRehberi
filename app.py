@@ -422,7 +422,10 @@ textarea{resize:vertical;min-height:90px}
 .btn:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(30,64,175,.4)}
 .btn:disabled{opacity:.65;cursor:not-allowed;transform:none}
 .output-wrap{position:relative;margin-top:8px}
-.output{background:#f8fafc;border:2px solid #e2e8f0;border-radius:12px;padding:20px;min-height:100px;white-space:pre-wrap;font-size:14px;line-height:1.75}
+.output{background:#f8fafc;border:2px solid #e2e8f0;border-radius:12px;padding:20px;min-height:100px;font-size:14px;line-height:1.75}
+.output p{margin:0 0 12px}.output p:last-child{margin-bottom:0}
+.output ul,.output ol{margin:10px 0 14px;padding-left:22px}.output li{margin:6px 0}
+.output strong{display:inline-block;margin-top:4px}
 .copy-btn{position:absolute;top:10px;right:10px;background:#10b981;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;opacity:0;transition:opacity .2s}
 .output-wrap:hover .copy-btn{opacity:1}
 @media(hover:none){.copy-btn{opacity:1}}
