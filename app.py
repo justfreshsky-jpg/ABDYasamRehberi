@@ -674,6 +674,7 @@ function _fallbackCopy(txt,cb){
   document.body.removeChild(ta);
 }
 function formatResult(text){
+  text=text.replace(/^\s{0,3}#{1,6}\s+/gm,'');
   function escape(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
   var paragraphs=text.split(/\\n{2,}/);
   return paragraphs.map(function(para){
