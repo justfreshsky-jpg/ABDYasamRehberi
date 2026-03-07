@@ -675,9 +675,9 @@ function _fallbackCopy(txt,cb){
 }
 function formatResult(text){
   function escape(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
-  var paragraphs=text.split(/\n{2,}/);
+  var paragraphs=text.split(/\\n{2,}/);
   return paragraphs.map(function(para){
-    var lines=para.split('\n').filter(function(l){return l.trim();});
+    var lines=para.split('\\n').filter(function(l){return l.trim();});
     if(!lines.length) return '';
     var isOrdered=lines.every(function(l){return /^\d+\.\s/.test(l.trim());});
     var isBullet=lines.every(function(l){return /^[-•]\s/.test(l.trim());});
@@ -759,9 +759,14 @@ function quickStart(tab){
 }
 
 document.addEventListener('DOMContentLoaded',function(){
-  document.querySelectorAll('[data-tab]').forEach(function(btn){
-    btn.addEventListener('click',function(){show(btn.dataset.tab,btn);});
-  });
+  var topicTabs=document.getElementById('topicTabs');
+  if(topicTabs){
+    topicTabs.querySelectorAll('button[data-tab]').forEach(function(btn){
+      btn.addEventListener('click',function(){show(btn.dataset.tab,btn);});
+    });
+    var initialBtn=topicTabs.querySelector('button.active');
+    if(initialBtn) show(initialBtn.dataset.tab,initialBtn);
+  }
   document.querySelectorAll('[data-quickstart]').forEach(function(el){
     el.addEventListener('click',function(){quickStart(el.dataset.quickstart);});
   });
