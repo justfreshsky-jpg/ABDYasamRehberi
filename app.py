@@ -426,7 +426,7 @@ textarea{resize:vertical;min-height:90px}
 .copy-btn{position:absolute;top:10px;right:10px;background:#10b981;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;opacity:0;transition:opacity .2s}
 .output-wrap:hover .copy-btn{opacity:1}
 @media(hover:none){.copy-btn{opacity:1}}
-.spinner{display:inline-block;width:16px;height:16px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px}
+.spinner{display:inline-block;width:16px;height:16px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px;pointer-events:none}
 @keyframes spin{to{transform:rotate(360deg)}}
 .output.loading{color:#94a3b8;font-style:italic}
 .output.error{color:#ef4444}
